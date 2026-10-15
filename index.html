@@ -103,7 +103,7 @@
             <h1 style="color:var(--accent); font-size:45px; margin-bottom:30px; letter-spacing: 2px;">ВСПЫШКА</h1>
             <input type="email" id="log-email" placeholder="Email" autocomplete="off">
             <div class="pass-container">
-                <input type="password" id="log-pass" placeholder="Пароль">
+                <input type="password" id="log-pass" placeholder="Пароль" autocomplete="current-password">
                 <i class="fas fa-eye" onclick="app.togglePassVisibility('log-pass', this)"></i>
             </div>
             <button class="btn" onclick="app.auth('login')" style="width:100%; margin-top:20px;">ВОЙТИ</button>
@@ -115,11 +115,11 @@
             <input type="text" id="reg-name" placeholder="Имя" autocomplete="off" style="margin-top:12px;">
             <input type="text" id="reg-nick" placeholder="Никнейм" autocomplete="off" style="margin-top:12px;">
             <div class="pass-container">
-                <input type="password" id="reg-pass" placeholder="Пароль">
+                <input type="password" id="reg-pass" placeholder="Пароль" autocomplete="new-password">
                 <i class="fas fa-eye" onclick="app.togglePassVisibility('reg-pass', this)"></i>
             </div>
             <div class="pass-container">
-                <input type="password" id="reg-pass-confirm" placeholder="Повторите пароль">
+                <input type="password" id="reg-pass-confirm" placeholder="Повторите пароль" autocomplete="new-password">
                 <i class="fas fa-eye" onclick="app.togglePassVisibility('reg-pass-confirm', this)"></i>
             </div>
             <button class="btn" onclick="app.auth('reg')" style="width:100%; margin-top:20px;">РЕГИСТРАЦИЯ</button>
@@ -187,7 +187,16 @@
         </div>
     </div>
 
-    <!-- Кастомное модальное окно подтверждения удаления -->
+    <!-- Модальное окно просмотра профиля собеседника -->
+    <div id="user-profile-modal" class="modal">
+        <div class="modal-box">
+            <div class="avatar" id="modal-user-avatar" style="width: 70px; height: 70px; font-size: 28px; margin: 0 auto 15px auto;">?</div>
+            <h3 id="modal-user-name" style="margin-bottom: 5px;">Имя</h3>
+            <div id="modal-user-nick" style="color: var(--gray); font-size: 16px; margin-bottom: 25px;">@nickname</div>
+            <button class="btn" onclick="app.toggleModal('user-profile-modal', false)" style="width:100%; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
     <div id="confirm-modal" class="modal">
         <div class="modal-box">
             <h3 style="color:var(--red);">Удаление</h3>
@@ -199,16 +208,18 @@
         </div>
     </div>
 
+    <!-- Окно чата с фиксированной шапкой -->
     <div id="chat-window" class="screen" style="z-index:100;">
-        <header>
+        <header style="flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
             <div onclick="app.closeChat()" style="color:var(--accent); cursor:pointer; padding:5px 10px;"><i class="fas fa-chevron-left"></i></div>
-            <div style="text-align:center; flex:1; margin-right:40px;">
-                <b id="chat-title">Чат</b>
+            <div onclick="app.openOpponentProfile()" style="text-align:center; flex:1; cursor:pointer; overflow:hidden; padding: 0 10px;">
+                <b id="chat-title" style="display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Чат</b>
             </div>
+            <div style="width: 30px;"></div>
         </header>
         <div id="messages"></div>
         <div class="input-bar">
-            <input type="text" id="m-input" placeholder="Сообщение..." autocomplete="off" enterkeyhint="send">
+            <input type="text" id="m-input" placeholder="Сообщение..." autocomplete="off" data-form-type="other" enterkeyhint="send">
             <button class="btn" onclick="app.sendMsg()">ОК</button>
         </div>
     </div>
@@ -220,7 +231,7 @@
         </header>
         <div id="comments-list"></div>
         <div class="input-bar">
-            <input type="text" id="comment-input" placeholder="Написать комментарий..." autocomplete="off">
+            <input type="text" id="comment-input" placeholder="Написать комментарий..." autocomplete="off" data-form-type="other">
             <button class="btn" onclick="app.sendComment()">ОК</button>
         </div>
     </div>
@@ -240,7 +251,7 @@
     <div id="post-modal" class="modal">
         <div class="modal-box">
             <h3>Новая вспышка</h3>
-            <textarea id="post-input" placeholder="Что у вас нового?..." autocomplete="off"></textarea>
+            <textarea id="post-input" placeholder="Что у вас нового?..." autocomplete="off" data-form-type="other"></textarea>
             <button class="btn" onclick="app.createPost()" style="width:100%; margin-top:15px;">ОПУБЛИКОВАТЬ</button>
             <button class="btn" onclick="app.toggleModal('post-modal', false)" style="width:100%; margin-top:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">ОТМЕНА</button>
         </div>
@@ -249,7 +260,7 @@
     <div id="search-modal" class="modal">
         <div class="modal-box">
             <h3>Найти собеседника</h3>
-            <input type="text" id="search-input" placeholder="@ник..." autocomplete="off">
+            <input type="text" id="search-input" placeholder="@ник..." autocomplete="off" data-form-type="other">
             <button class="btn" onclick="app.findUser()" style="width:100%; margin-top:15px;">НАЙТИ</button>
             <button class="btn" onclick="app.toggleModal('search-modal', false)" style="width:100%; margin-top:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">ОТМЕНА</button>
         </div>
@@ -274,6 +285,7 @@
 
         const app = {
             me: null, myId: null, rawEmail: '', isEmailVisible: false, currentOpponentId: null, activePostId: null,
+            currentOpponentData: null,
             chats: JSON.parse(localStorage.getItem('f_chats') || "{}"),
             dbId: '6a0adb260034b853e4b8', 
             subs: [],
@@ -315,7 +327,6 @@
                 }
             },
             
-            /* Управление историей и кнопкой «Назад» на телефоне */
             tab(name) {
                 history.pushState({ screen: name }, "", `#${name}`);
                 this.showScreen(name);
@@ -444,7 +455,6 @@
                         }
                         this.save(); this.renderList();
 
-                        /* Кликабельное пуш-уведомление */
                         if(this.currentOpponentId !== m.sender_id && typeof window !== 'undefined' && 'Notification' in window && window.Notification && Notification.permission === "granted") {
                             const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
                             const notif = new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text });
@@ -530,6 +540,13 @@
                 document.getElementById('bottom-nav').classList.remove('visible');
                 document.getElementById('chat-title').innerText = name;
                 
+                // Подгружаем полные данные собеседника для профиля
+                try {
+                    this.currentOpponentData = await databases.getDocument(this.dbId, 'users', id);
+                } catch(e) {
+                    this.currentOpponentData = { name: name, nickname: this.chats[id]?.nick || 'unknown' };
+                }
+
                 const box = document.getElementById('messages'); box.innerHTML = '';
 
                 const s1 = client.subscribe(`databases.${this.dbId}.collections.messages.documents`, r => {
@@ -552,6 +569,17 @@
                 res.documents.forEach(m => this.renderMsg(m));
                 resetViewportHeight();
             },
+            
+            /* Открытие профиля собеседника при клике на его имя в шапке чата */
+            openOpponentProfile() {
+                if(!this.currentOpponentData) return;
+                const u = this.currentOpponentData;
+                document.getElementById('modal-user-name').innerText = u.name;
+                document.getElementById('modal-user-nick').innerText = '@' + (u.nickname || 'unknown');
+                document.getElementById('modal-user-avatar').innerText = u.name ? u.name[0].toUpperCase() : '?';
+                this.toggleModal('user-profile-modal', true);
+            },
+
             renderMsg(m) {
                 const b = document.getElementById('messages');
                 if(document.querySelector(`[data-id="${m.$id}"]`)) return;
@@ -719,7 +747,6 @@
             },
             closeMenu() { document.getElementById('context-menu').style.display = 'none'; },
             
-            /* Кастомное окно подтверждения вместо стандартного confirm() */
             confirmDelete(type, item) {
                 const modal = document.getElementById('confirm-modal');
                 const yesBtn = document.getElementById('confirm-yes-btn');
@@ -773,6 +800,7 @@
             closeChat() { 
                 this.subs.forEach(s => s()); this.subs = [];
                 this.currentOpponentId = null;
+                this.currentOpponentData = null;
                 document.getElementById('chat-window').classList.remove('active'); 
                 document.getElementById('bottom-nav').classList.add('visible'); 
                 this.renderList();
@@ -789,28 +817,24 @@
 
         app.initTheme();
 
-        /* Обработка кнопки «Назад» на телефоне без вылетов */
         window.addEventListener('popstate', (e) => {
-            // Закрываем открытые модалки
             document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
             
-            // Если был открыт чат
             if (document.getElementById('chat-window').classList.contains('active')) {
                 document.getElementById('chat-window').classList.remove('active');
                 document.getElementById('bottom-nav').classList.add('visible');
                 app.currentOpponentId = null;
+                app.currentOpponentData = null;
                 app.subs.forEach(s => s()); app.subs = [];
                 app.renderList();
                 return;
             }
-            // Если были открыты комментарии
             if (document.getElementById('comments-window').classList.contains('active')) {
                 document.getElementById('comments-window').classList.remove('active');
                 document.getElementById('bottom-nav').classList.add('visible');
                 app.activePostId = null;
                 return;
             }
-            // Переключение между вкладками
             if (e.state && e.state.screen) {
                 app.showScreen(e.state.screen);
             }
