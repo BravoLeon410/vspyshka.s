@@ -26,17 +26,12 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        /* Запрещаем выделение и синий балун по умолчанию для всего приложения */
         body, button, header, .chat-item, .modal-box, .avatar { 
-            -webkit-user-select: none; 
-            user-select: none; 
-            -webkit-touch-callout: none;
+            -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
         }
 
-        /* Разрешаем выделение только для текста сообщений, постов и комментариев */
         .msg span, .post-card div, .comment-card div {
-            -webkit-user-select: text;
-            user-select: text;
+            -webkit-user-select: text; user-select: text;
         }
         
         body { 
@@ -50,7 +45,6 @@
 
         #feed-screen, #list-screen, #settings-screen { padding-bottom: 85px; }
         
-        /* Окна чата и комментариев с фиксированной структурой */
         #chat-window, #comments-window { display: none; flex-direction: column; position: fixed; inset: 0; height: calc(var(--vh, 1vh) * 100); background: var(--bg); z-index: 100; }
         #chat-window.active, #comments-window.active { display: flex; }
 
@@ -84,13 +78,19 @@
         
         .input-bar { padding: 12px 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--input-border); flex-shrink: 0; align-items: center; z-index: 10; }
         
+        /* Поля ввода сделаны через textarea для полной защиты от автозаполнения паролей */
+        textarea.msg-textarea { 
+            width: 100%; padding: 12px 18px; border-radius: 22px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text); outline: none; font-size: 15px; transition: 0.2s;
+            resize: none; height: 46px; max-height: 100px; line-height: 20px; font-family: sans-serif;
+            -webkit-user-select: text; user-select: text;
+        }
+        textarea.msg-textarea:focus { border-color: var(--accent); background: var(--input-focus); }
+
         input[type="text"], input[type="email"], input[type="password"], textarea { 
             width: 100%; padding: 14px 20px; border-radius: 25px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text); outline: none; font-size: 15px; transition: 0.2s;
             -webkit-user-select: text; user-select: text;
         }
         input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, textarea:focus { border-color: var(--accent); background: var(--input-focus); }
-        
-        textarea { resize: none; border-radius: 18px; height: 100px; font-family: sans-serif; }
 
         .pass-container { position: relative; width: 100%; margin-top: 12px; }
         .pass-container i { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: var(--gray); cursor: pointer; padding: 5px; }
@@ -115,7 +115,7 @@
     <div id="auth-screen" class="screen" style="display:none; justify-content:center; align-items:center; z-index:20;">
         <div id="login-form" style="width:85%; text-align:center;">
             <h1 style="color:var(--accent); font-size:45px; margin-bottom:30px; letter-spacing: 2px;">ВСПЫШКА</h1>
-            <input type="email" id="log-email" placeholder="Email" autocomplete="off" autocapitalize="none">
+            <input type="email" id="log-email" placeholder="Email" autocomplete="off">
             <div class="pass-container">
                 <input type="password" id="log-pass" placeholder="Пароль" autocomplete="current-password">
                 <i class="fas fa-eye" onclick="app.togglePassVisibility('log-pass', this)"></i>
@@ -125,9 +125,9 @@
         </div>
         <div id="reg-form" style="width:85%; text-align:center; display:none;">
             <h1 style="color:var(--accent); font-size:35px; margin-bottom:20px; letter-spacing: 1px;">СОЗДАТЬ</h1>
-            <input type="email" id="reg-email" placeholder="Email" autocomplete="off" autocapitalize="none">
+            <input type="email" id="reg-email" placeholder="Email" autocomplete="off">
             <input type="text" id="reg-name" placeholder="Имя" autocomplete="off" style="margin-top:12px;">
-            <input type="text" id="reg-nick" placeholder="Никнейм" autocomplete="off" autocapitalize="none" style="margin-top:12px;">
+            <input type="text" id="reg-nick" placeholder="Никнейм" autocomplete="off" style="margin-top:12px;">
             <div class="pass-container">
                 <input type="password" id="reg-pass" placeholder="Пароль" autocomplete="new-password">
                 <i class="fas fa-eye" onclick="app.togglePassVisibility('reg-pass', this)"></i>
@@ -176,6 +176,11 @@
                 <i class="fas fa-palette" style="color:var(--accent);"></i> Настройки темы
             </button>
 
+            <!-- Кнопка принудительного запроса разрешений на уведомления -->
+            <button class="btn" style="background:var(--input-bg); color:var(--text); border:1px solid var(--input-border); width:100%; margin-top:10px; border-radius:14px; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="app.requestNotificationPermission()">
+                <i class="fas fa-bell" style="color:var(--accent);"></i> Включить уведомления
+            </button>
+
             <button class="btn" style="background:var(--red); color:white; width:100%; margin-top:15px; border-radius:12px;" onclick="app.logout()">ВЫЙТИ ИЗ АККАУНТА</button>
         </div>
     </div>
@@ -221,7 +226,6 @@
         </div>
     </div>
 
-    <!-- Чат с жестко зафиксированной шапкой -->
     <div id="chat-window" class="screen">
         <header>
             <div onclick="app.closeChat()" style="color:var(--accent); cursor:pointer; padding:5px 10px;"><i class="fas fa-chevron-left"></i></div>
@@ -232,9 +236,9 @@
         </header>
         <div id="messages"></div>
         <div class="input-bar">
-            <!-- Жесткое подавление автозаполнения паролей и карт -->
-            <input type="text" id="m-input" placeholder="Сообщение..." autocomplete="new-password" name="random_chat_msg_input" autocapitalize="sentences" spellcheck="true" enterkeyhint="send">
-            <button class="btn" onclick="app.sendMsg()">ОК</button>
+            <!-- Заменено на textarea, что полностью исключает любые баги автозаполнения паролей -->
+            <textarea id="m-input" class="msg-textarea" placeholder="Сообщение..." rows="1" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
+            <button class="btn" onclick="app.sendMsg()" style="height: 46px; padding: 0 20px;">ОК</button>
         </div>
     </div>
 
@@ -245,8 +249,8 @@
         </header>
         <div id="comments-list"></div>
         <div class="input-bar">
-            <input type="text" id="comment-input" placeholder="Написать комментарий..." autocomplete="new-password" name="random_comment_input" autocapitalize="sentences" spellcheck="true">
-            <button class="btn" onclick="app.sendComment()">ОК</button>
+            <textarea id="comment-input" class="msg-textarea" placeholder="Написать комментарий..." rows="1" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
+            <button class="btn" onclick="app.sendComment()" style="height: 46px; padding: 0 20px;">ОК</button>
         </div>
     </div>
 
@@ -265,7 +269,7 @@
     <div id="post-modal" class="modal">
         <div class="modal-box">
             <h3>Новая вспышка</h3>
-            <textarea id="post-input" placeholder="Что у вас нового?..." autocomplete="new-password" name="random_post_input" autocapitalize="sentences" spellcheck="true"></textarea>
+            <textarea id="post-input" placeholder="Что у вас нового?..." autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
             <button class="btn" onclick="app.createPost()" style="width:100%; margin-top:15px;">ОПУБЛИКОВАТЬ</button>
             <button class="btn" onclick="app.toggleModal('post-modal', false)" style="width:100%; margin-top:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">ОТМЕНА</button>
         </div>
@@ -274,7 +278,7 @@
     <div id="search-modal" class="modal">
         <div class="modal-box">
             <h3>Найти собеседника</h3>
-            <input type="text" id="search-input" placeholder="@ник..." autocomplete="new-password" name="random_search_input" autocapitalize="none" spellcheck="false">
+            <input type="text" id="search-input" placeholder="@ник..." autocomplete="off">
             <button class="btn" onclick="app.findUser()" style="width:100%; margin-top:15px;">НАЙТИ</button>
             <button class="btn" onclick="app.toggleModal('search-modal', false)" style="width:100%; margin-top:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">ОТМЕНА</button>
         </div>
@@ -319,6 +323,20 @@
                 if(checkOrange && checkBlue) {
                     checkOrange.style.display = themeName === 'orange' ? 'block' : 'none';
                     checkBlue.style.display = themeName === 'blue' ? 'block' : 'none';
+                }
+            },
+
+            requestNotificationPermission() {
+                if ('Notification' in window) {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            alert('Уведомления успешно включены!');
+                        } else {
+                            alert('Разрешение на уведомления отклонено в настройках браузера.');
+                        }
+                    });
+                } else {
+                    alert('Ваш браузер не поддерживает уведомления.');
                 }
             },
 
@@ -440,7 +458,7 @@
                     document.getElementById('auth-screen').style.display = 'none';
                     
                     if (typeof window !== 'undefined' && 'Notification' in window && window.Notification) {
-                        if (Notification.permission !== "granted") { 
+                        if (Notification.permission === "default") { 
                             Notification.requestPermission(); 
                         }
                     }
@@ -469,14 +487,19 @@
                         }
                         this.save(); this.renderList();
 
-                        if(this.currentOpponentId !== m.sender_id && typeof window !== 'undefined' && 'Notification' in window && window.Notification && Notification.permission === "granted") {
+                        // Уведомления с принудительной проверкой прав
+                        if(this.currentOpponentId !== m.sender_id && typeof window !== 'undefined' && 'Notification' in window) {
                             const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
-                            const notif = new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text });
-                            notif.onclick = () => {
-                                window.focus();
-                                notif.close();
-                                this.openChat(m.sender_id, senderName);
-                            };
+                            if (Notification.permission === "granted") {
+                                try {
+                                    const notif = new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
+                                    notif.onclick = () => {
+                                        window.focus();
+                                        notif.close();
+                                        this.openChat(m.sender_id, senderName);
+                                    };
+                                } catch(err) { console.log("Ошибка показа уведомления:", err); }
+                            }
                         }
                     }
                 });
@@ -625,6 +648,7 @@
                     this.chats[this.currentOpponentId].last_text = t; this.save();
                 }
                 i.value = '';
+                i.style.height = '46px';
             },
 
             async createPost() {
@@ -723,7 +747,9 @@
                 const res = await databases.createDocument(this.dbId, 'comments', 'unique()', {
                     post_id: this.activePostId, user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now()
                 });
-                i.value = ''; this.renderComment(res);
+                i.value = ''; 
+                i.style.height = '46px';
+                this.renderComment(res);
             },
             closeComments() { 
                 document.getElementById('comments-window').classList.remove('active'); 
