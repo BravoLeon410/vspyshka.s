@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ВСПЫШКА</title>
     
-    <!-- Настройки PWA (Полный экран и иконки) -->
+    <!-- Настройки PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff8c00" id="meta-theme-color">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,68 +16,32 @@
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Тема по умолчанию: Оранжево-чёрная */
         :root, [data-theme="orange"] { 
-            --bg: #000; 
-            --card: #121212; 
-            --accent: #ff8c00; 
-            --text: #fff; 
-            --gray: #777; 
-            --red: #ff4444; 
-            --green: #00ffcc; 
-            --accent-glow: rgba(255, 140, 0, 0.4);
-            --input-bg: #181818;
-            --input-border: #282828;
-            --input-focus: #1f1f1f;
+            --bg: #000; --card: #121212; --accent: #ff8c00; --text: #fff; --gray: #777; --red: #ff4444; --green: #00ffcc; 
+            --accent-glow: rgba(255, 140, 0, 0.4); --input-bg: #181818; --input-border: #282828; --input-focus: #1f1f1f;
         }
-
-        /* Голубо-серая тема */
         [data-theme="blue"] {
-            --bg: #0b0f19;
-            --card: #141c2e;
-            --accent: #38bdf8;
-            --text: #f1f5f9;
-            --gray: #94a3b8;
-            --red: #f87171;
-            --green: #34d399;
-            --accent-glow: rgba(56, 189, 248, 0.4);
-            --input-bg: #1e293b;
-            --input-border: #334155;
-            --input-focus: #27354f;
+            --bg: #0b0f19; --card: #141c2e; --accent: #38bdf8; --text: #f1f5f9; --gray: #94a3b8; --red: #f87171; --green: #34d399; 
+            --accent-glow: rgba(56, 189, 248, 0.4); --input-bg: #1e293b; --input-border: #334155; --input-focus: #27354f;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            background: var(--bg); 
-            color: var(--text); 
-            height: 100vh; 
-            height: calc(var(--vh, 1vh) * 100); 
-            overflow: hidden; 
-            position: relative; 
-            transition: background 0.3s, color 0.3s;
+            background: var(--bg); color: var(--text); height: 100vh; height: calc(var(--vh, 1vh) * 100); overflow: hidden; position: relative; transition: background 0.3s, color 0.3s;
         }
         
-        .msg, .post-card, .comment-card, .chat-item { 
-            -webkit-user-select: none;
-            user-select: none;
-        }
+        .msg, .post-card, .comment-card, .chat-item { -webkit-user-select: none; user-select: none; }
 
         .screen { 
-            position: fixed; 
-            top: 0; left: 0; right: 0; bottom: 0;
-            height: calc(var(--vh, 1vh) * 100); 
-            background: var(--bg); 
-            display: none; 
-            flex-direction: column; 
-            z-index: 10; 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: calc(var(--vh, 1vh) * 100); background: var(--bg); display: none; flex-direction: column; z-index: 10; 
         }
         .screen.active { display: flex; }
 
         #feed-screen, #list-screen, #settings-screen { padding-bottom: 85px; }
         #chat-window, #comments-window { padding-bottom: 0; }
 
-        header { padding: 15px; background: var(--card); border-bottom: 1px solid var(--input-border); display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; transition: background 0.3s; }
+        header { padding: 15px; background: var(--card); border-bottom: 1px solid var(--input-border); display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; }
         
         .btn { background: var(--accent); color: #000; border: none; padding: 12px 24px; border-radius: 30px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn:active { transform: scale(0.96); opacity: 0.9; }
@@ -92,7 +56,7 @@
         .nav-btn span { font-size: 10px; margin-top: 4px; font-weight: bold; }
         
         #chat-list, #feed-container, #comments-list { flex: 1; overflow-y: auto; padding: 5px 0; }
-        .chat-item, .post-card, .comment-card { padding: 16px; border-bottom: 1px solid var(--input-border); background: var(--card); margin: 10px 14px; border-radius: 18px; position: relative; transition: background 0.3s; }
+        .chat-item, .post-card, .comment-card { padding: 16px; border-bottom: 1px solid var(--input-border); background: var(--card); margin: 10px 14px; border-radius: 18px; position: relative; }
         
         .post-card.admin-post { border: 1px solid var(--accent-glow); box-shadow: 0 4px 20px var(--accent-glow); }
         .admin-badge { background: var(--accent); color: #000; font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; vertical-align: middle; }
@@ -105,7 +69,7 @@
         .out { align-self: flex-end; background: var(--accent); color: #000; border-bottom-right-radius: 5px; }
         .msg-time { font-size: 9px; align-self: flex-end; margin-top: 5px; opacity: 0.6; }
         
-        .input-bar { padding: 12px 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--input-border); flex-shrink: 0; align-items: center; transition: background 0.3s; }
+        .input-bar { padding: 12px 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--input-border); flex-shrink: 0; align-items: center; }
         
         input[type="text"], input[type="email"], input[type="password"], textarea { 
             width: 100%; padding: 14px 20px; border-radius: 25px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text); outline: none; font-size: 15px; transition: 0.2s;
@@ -127,18 +91,13 @@
         .context-item { padding: 12px 14px; color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-radius: 10px; }
         .context-item:active { background: var(--input-focus); }
         .context-item.del { color: var(--red); }
-        .online-tag { font-size: 11px; color: var(--green); margin-top: 2px; font-weight: 500; }
-        .offline-tag { font-size: 11px; color: var(--gray); margin-top: 2px; }
         
         .profile-field { display: flex; justify-content: space-between; align-items: center; background: var(--input-bg); padding: 14px 16px; border-radius: 14px; margin-bottom: 14px; border: 1px solid var(--input-border); }
-        
         .theme-option { display: flex; align-items: center; justify-content: space-between; background: var(--input-bg); padding: 14px 18px; border-radius: 14px; margin-bottom: 10px; border: 1px solid var(--input-border); cursor: pointer; }
-        .theme-option:active { opacity: 0.8; }
     </style>
 </head>
 <body>
 
-    <!-- Экран авторизации (по умолчанию скрыт, чтобы не было «мигания») -->
     <div id="auth-screen" class="screen" style="display:none; justify-content:center; align-items:center; z-index:20;">
         <div id="login-form" style="width:85%; text-align:center;">
             <h1 style="color:var(--accent); font-size:45px; margin-bottom:30px; letter-spacing: 2px;">ВСПЫШКА</h1>
@@ -180,10 +139,9 @@
         <button class="btn fab-btn" onclick="app.toggleModal('search-modal', true)"><i class="fas fa-plus"></i></button>
     </div>
 
-    <!-- Экран Профиля и Настроек -->
     <div id="settings-screen" class="screen">
         <header><b style="color:var(--accent); font-size:22px;">ПРОФИЛЬ</b></header>
-        <div style="background: var(--card); margin: 15px; padding: 20px; border-radius: 20px; border-left: 5px solid var(--accent); overflow-y: auto; transition: background 0.3s;">
+        <div style="background: var(--card); margin: 15px; padding: 20px; border-radius: 20px; border-left: 5px solid var(--accent); overflow-y: auto;">
             <div style="color: var(--accent); font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Имя</div>
             <div class="profile-field">
                 <span id="prof-name" style="font-size: 18px; font-weight: bold;">...</span>
@@ -208,7 +166,6 @@
         </div>
     </div>
 
-    <!-- Модальное окно выбора темы -->
     <div id="theme-modal" class="modal">
         <div class="modal-box">
             <h3>Выбор темы</h3>
@@ -230,12 +187,23 @@
         </div>
     </div>
 
+    <!-- Кастомное модальное окно подтверждения удаления -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-box">
+            <h3 style="color:var(--red);">Удаление</h3>
+            <p id="confirm-text" style="font-size:15px; margin-bottom:20px; color:var(--text);">Удалить безвозвратно?</p>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" id="confirm-yes-btn" style="flex:1; background:var(--red); color:#fff;">Удалить</button>
+                <button class="btn" onclick="app.toggleModal('confirm-modal', false)" style="flex:1; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">Отмена</button>
+            </div>
+        </div>
+    </div>
+
     <div id="chat-window" class="screen" style="z-index:100;">
         <header>
             <div onclick="app.closeChat()" style="color:var(--accent); cursor:pointer; padding:5px 10px;"><i class="fas fa-chevron-left"></i></div>
             <div style="text-align:center; flex:1; margin-right:40px;">
                 <b id="chat-title">Чат</b>
-                <div id="chat-status" class="offline-tag">офлайн</div>
             </div>
         </header>
         <div id="messages"></div>
@@ -299,15 +267,6 @@
         function resetViewportHeight() {
             let vh = window.innerHeight * 0.01;
             document.documentElement.style.setProperty('--vh', `${vh}px`);
-            
-            if (document.getElementById('chat-window').classList.contains('active')) {
-                const b = document.getElementById('messages');
-                if(b) b.scrollTop = b.scrollHeight;
-            }
-            if (document.getElementById('comments-window').classList.contains('active')) {
-                const c = document.getElementById('comments-list');
-                if(c) c.scrollTop = c.scrollHeight;
-            }
         }
         window.addEventListener('resize', resetViewportHeight);
         window.addEventListener('orientationchange', resetViewportHeight);
@@ -326,12 +285,9 @@
             setTheme(themeName, save = true) {
                 document.documentElement.setAttribute('data-theme', themeName);
                 if(save) localStorage.setItem('f_theme', themeName);
-
                 const metaColor = document.getElementById('meta-theme-color');
-                if(metaColor) {
-                    metaColor.setAttribute('content', themeName === 'blue' ? '#38bdf8' : '#ff8c00');
-                }
-
+                if(metaColor) metaColor.setAttribute('content', themeName === 'blue' ? '#38bdf8' : '#ff8c00');
+                
                 const checkOrange = document.getElementById('check-orange');
                 const checkBlue = document.getElementById('check-blue');
                 if(checkOrange && checkBlue) {
@@ -358,7 +314,13 @@
                     icon.className = "fas fa-eye";
                 }
             },
+            
+            /* Управление историей и кнопкой «Назад» на телефоне */
             tab(name) {
+                history.pushState({ screen: name }, "", `#${name}`);
+                this.showScreen(name);
+            },
+            showScreen(name) {
                 document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
                 document.getElementById('bottom-nav').classList.add('visible');
@@ -371,13 +333,14 @@
                     document.getElementById('list-screen').classList.add('active');
                     document.getElementById('btn-chats').classList.add('active');
                     this.renderList();
-                } else {
+                } else if(name === 'settings') {
                     document.getElementById('settings-screen').classList.add('active');
                     document.getElementById('btn-settings').classList.add('active');
                     this.updateProfileUI();
                 }
                 resetViewportHeight();
             },
+
             updateProfileUI() {
                 if(this.me) {
                     document.getElementById('prof-name').innerText = this.me.name;
@@ -436,7 +399,7 @@
                         const res = await account.create('unique()', email, pass);
                         await account.createEmailPasswordSession(email, pass);
                         await databases.createDocument(this.dbId, 'users', res.$id, {
-                            user_id: res.$id, name: name, nickname: nick, is_online: true, last_seen: Date.now()
+                            user_id: res.$id, name: name, nickname: nick
                         });
                     } else {
                         await account.createEmailPasswordSession(document.getElementById('log-email').value, document.getElementById('log-pass').value);
@@ -456,14 +419,9 @@
                             Notification.requestPermission(); 
                         }
                     }
-                    
-                    await databases.updateDocument(this.dbId, 'users', this.myId, { is_online: true, last_seen: Date.now() });
-                    
-                    window.addEventListener('beforeunload', () => {
-                        navigator.sendBeacon(`https://fra.cloud.appwrite.io/v1/databases/${this.dbId}/collections/users/documents/${this.myId}`, JSON.stringify({ is_online: false, last_seen: Date.now() }));
-                    });
 
-                    this.tab('chats');
+                    history.replaceState({ screen: 'chats' }, "", "#chats");
+                    this.showScreen('chats');
                     this.initRealtimeGlobal();
                 } catch(e) {
                     alert("Ошибка входа. Проверьте коллекции в Appwrite.");
@@ -486,8 +444,15 @@
                         }
                         this.save(); this.renderList();
 
+                        /* Кликабельное пуш-уведомление */
                         if(this.currentOpponentId !== m.sender_id && typeof window !== 'undefined' && 'Notification' in window && window.Notification && Notification.permission === "granted") {
-                            new Notification(`ВСПЫШКА: ${this.chats[m.sender_id].name}`, { body: m.text });
+                            const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
+                            const notif = new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text });
+                            notif.onclick = () => {
+                                window.focus();
+                                notif.close();
+                                this.openChat(m.sender_id, senderName);
+                            };
                         }
                     }
                 });
@@ -513,9 +478,7 @@
                                 if (uDoc && uDoc.name) {
                                     this.chats[oppId] = { name: uDoc.name, nick: uDoc.nickname };
                                 }
-                            } catch(err) {
-                                console.log(`Пропущен удаленный пользователь: ${oppId}`);
-                            }
+                            } catch(err) {}
                         }
                         this.save();
                     } catch(e) {}
@@ -561,11 +524,12 @@
             },
             async openChat(id, name) {
                 this.currentOpponentId = id;
+                history.pushState({ chat: id, name: name }, "", `#chat-${id}`);
+                
                 document.getElementById('chat-window').classList.add('active');
                 document.getElementById('bottom-nav').classList.remove('visible');
                 document.getElementById('chat-title').innerText = name;
                 
-                this.checkOpponentStatus(id);
                 const box = document.getElementById('messages'); box.innerHTML = '';
 
                 const s1 = client.subscribe(`databases.${this.dbId}.collections.messages.documents`, r => {
@@ -575,12 +539,8 @@
                         if(r.events.some(e=>e.includes('.delete'))) document.querySelector(`[data-id="${m.$id}"]`)?.remove();
                     }
                 });
-
-                const s2 = client.subscribe(`databases.${this.dbId}.collections.users.documents.${id}`, r => {
-                    this.updateStatusUI(r.payload);
-                });
                 
-                this.subs.push(s1, s2);
+                this.subs.push(s1);
 
                 const res = await databases.listDocuments(this.dbId, 'messages', [
                     Appwrite.Query.or([
@@ -591,17 +551,6 @@
                 ]);
                 res.documents.forEach(m => this.renderMsg(m));
                 resetViewportHeight();
-            },
-            async checkOpponentStatus(id) {
-                try {
-                    const u = await databases.getDocument(this.dbId, 'users', id);
-                    this.updateStatusUI(u);
-                } catch(e){}
-            },
-            updateStatusUI(u) {
-                const el = document.getElementById('chat-status');
-                if(u.is_online) { el.className = 'online-tag'; el.innerText = 'в сети'; }
-                else { el.className = 'offline-tag'; el.innerText = `был(а) в сети в ${this.formatTime(u.last_seen)}`; }
             },
             renderMsg(m) {
                 const b = document.getElementById('messages');
@@ -648,7 +597,6 @@
                         const likesArr = p.likes || [];
                         const isLikedByMe = likesArr.includes(this.myId);
                         const likeColor = isLikedByMe ? 'var(--red)' : 'var(--text)';
-                        
                         const isPostFromAdmin = p.author_nickname === 'hyisa';
 
                         const card = document.createElement('div');
@@ -687,23 +635,16 @@
                     const post = await databases.getDocument(this.dbId, 'posts', postId);
                     let newLikes = post.likes || [];
                     const myIndex = newLikes.indexOf(this.myId);
-                    
-                    if (myIndex > -1) { 
-                        newLikes.splice(myIndex, 1); 
-                    } else { 
-                        newLikes.push(this.myId); 
-                    }
-
+                    if (myIndex > -1) { newLikes.splice(myIndex, 1); } else { newLikes.push(this.myId); }
                     await databases.updateDocument(this.dbId, 'posts', postId, { likes: newLikes });
                     this.loadFeed();
-                } catch(e) { 
-                    alert("Не удалось изменить лайк: " + e.message); 
-                }
+                } catch(e) { alert("Не удалось изменить лайк: " + e.message); }
             },
 
             /* Комментарии */
             async openComments(postId) {
                 this.activePostId = postId;
+                history.pushState({ comments: postId }, "", `#comments-${postId}`);
                 document.getElementById('comments-window').classList.add('active');
                 document.getElementById('bottom-nav').classList.remove('visible');
                 const box = document.getElementById('comments-list'); box.innerHTML = '';
@@ -732,7 +673,6 @@
             async sendComment() {
                 const i = document.getElementById('comment-input'), t = i.value.trim();
                 if(!t) return;
-                
                 const res = await databases.createDocument(this.dbId, 'comments', 'unique()', {
                     post_id: this.activePostId, user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now()
                 });
@@ -766,11 +706,10 @@
                     menu.appendChild(editBtn);
                 }
 
-                // Удалять свои сообщения/посты/комменты может владелец (у всех), админ может удалять чужие
                 if(isOwner || isAdmin) {
                     const delBtn = document.createElement('div'); delBtn.className = 'context-item del';
                     delBtn.innerHTML = `<i class="fas fa-trash"></i> Удалить ${type==='msg'?'у всех':''}`;
-                    delBtn.onclick = () => { this.deleteItem(type, item); this.closeMenu(); };
+                    delBtn.onclick = () => { this.confirmDelete(type, item); this.closeMenu(); };
                     menu.appendChild(delBtn);
                 }
 
@@ -780,33 +719,33 @@
             },
             closeMenu() { document.getElementById('context-menu').style.display = 'none'; },
             
-            async deleteItem(type, item) {
-                if(!confirm("Удалить безвозвратно?")) return;
+            /* Кастомное окно подтверждения вместо стандартного confirm() */
+            confirmDelete(type, item) {
+                const modal = document.getElementById('confirm-modal');
+                const yesBtn = document.getElementById('confirm-yes-btn');
+                modal.style.display = 'flex';
                 
-                const isAdmin = this.me && this.me.nickname === 'hyisa';
-                const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
-                
-                if (!isOwner && !isAdmin) {
-                    return alert("У вас нет прав на удаление чужого элемента!");
-                }
+                yesBtn.onclick = async () => {
+                    this.toggleModal('confirm-modal', false);
+                    const isAdmin = this.me && this.me.nickname === 'hyisa';
+                    const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
+                    
+                    if (!isOwner && !isAdmin) return alert("У вас нет прав на удаление!");
 
-                const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
-                try {
-                    await databases.deleteDocument(this.dbId, coll, item.$id);
-                    if(type === 'post') this.loadFeed();
-                    if(type === 'comment') this.openComments(this.activePostId);
-                } catch(e) { alert("Ошибка удаления: " + e.message); }
+                    const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
+                    try {
+                        await databases.deleteDocument(this.dbId, coll, item.$id);
+                        if(type === 'post') this.loadFeed();
+                        if(type === 'comment') this.openComments(this.activePostId);
+                    } catch(e) { alert("Ошибка удаления: " + e.message); }
+                };
             },
             
             async editItem(type, item) {
                 const newText = prompt("Редактировать text:", item.text);
                 if(!newText || newText.trim() === item.text) return;
-
                 const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
-                
-                if (!isOwner) {
-                    return alert("Вы можете редактировать только собственные публикации!");
-                }
+                if (!isOwner) return alert("Вы можете редактировать только собственные публикации!");
 
                 const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
                 try {
@@ -842,16 +781,40 @@
             toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; },
             save() { localStorage.setItem('f_chats', JSON.stringify(this.chats)); },
             async logout() {
-                try {
-                    await databases.updateDocument(this.dbId, 'users', this.myId, { is_online: false, last_seen: Date.now() });
-                    await account.deleteSession('current');
-                } catch(e){}
+                try { await account.deleteSession('current'); } catch(e){}
                 localStorage.clear(); 
                 location.reload();
             }
         };
 
         app.initTheme();
+
+        /* Обработка кнопки «Назад» на телефоне без вылетов */
+        window.addEventListener('popstate', (e) => {
+            // Закрываем открытые модалки
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+            
+            // Если был открыт чат
+            if (document.getElementById('chat-window').classList.contains('active')) {
+                document.getElementById('chat-window').classList.remove('active');
+                document.getElementById('bottom-nav').classList.add('visible');
+                app.currentOpponentId = null;
+                app.subs.forEach(s => s()); app.subs = [];
+                app.renderList();
+                return;
+            }
+            // Если были открыты комментарии
+            if (document.getElementById('comments-window').classList.contains('active')) {
+                document.getElementById('comments-window').classList.remove('active');
+                document.getElementById('bottom-nav').classList.add('visible');
+                app.activePostId = null;
+                return;
+            }
+            // Переключение между вкладками
+            if (e.state && e.state.screen) {
+                app.showScreen(e.state.screen);
+            }
+        });
 
         window.onclick = (e) => { if(!e.target.closest('.msg') && !e.target.closest('.post-card') && !e.target.closest('.comment-card')) app.closeMenu(); };
         window.onload = async () => {
@@ -860,7 +823,6 @@
                 const user = await account.get();
                 app.init(user);
             } catch (e) { 
-                // Если не вошел — плавно показываем экран авторизации без лишнего мельтешения
                 document.getElementById('auth-screen').style.display = 'flex'; 
             }
         };
