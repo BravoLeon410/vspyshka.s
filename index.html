@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ВСПЫШКА</title>
+    
+    <!-- Настройки PWA (Полный экран и иконки) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff8c00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ВСПЫШКА">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -115,7 +124,7 @@
             <input type="text" id="reg-name" placeholder="Имя" autocomplete="off" style="margin-top:12px;">
             <input type="text" id="reg-nick" placeholder="Никнейм" autocomplete="off" style="margin-top:12px;">
             <div class="pass-container">
-                <input type="password" id="reg-pass">
+                <input type="password" id="reg-pass" placeholder="Пароль">
                 <i class="fas fa-eye" onclick="app.togglePassVisibility('reg-pass', this)"></i>
             </div>
             <div class="pass-container">
@@ -784,4 +793,3 @@
     </script>
 </body>
 </html>
-                        
