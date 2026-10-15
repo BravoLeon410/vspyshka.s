@@ -7,7 +7,7 @@
     
     <!-- Настройки PWA (Полный экран и иконки) -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff8c00">
+    <meta name="theme-color" content="#ff8c00" id="meta-theme-color">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ВСПЫШКА">
@@ -16,7 +16,36 @@
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --bg: #000; --card: #121212; --accent: #ff8c00; --text: #fff; --gray: #777; --red: #ff4444; --green: #00ffcc; }
+        /* Тема по умолчанию: Оранжево-чёрная */
+        :root, [data-theme="orange"] { 
+            --bg: #000; 
+            --card: #121212; 
+            --accent: #ff8c00; 
+            --text: #fff; 
+            --gray: #777; 
+            --red: #ff4444; 
+            --green: #00ffcc; 
+            --accent-glow: rgba(255, 140, 0, 0.4);
+            --input-bg: #181818;
+            --input-border: #282828;
+            --input-focus: #1f1f1f;
+        }
+
+        /* Голубо-серая тема */
+        [data-theme="blue"] {
+            --bg: #0b0f19;
+            --card: #141c2e;
+            --accent: #38bdf8;
+            --text: #f1f5f9;
+            --gray: #94a3b8;
+            --red: #f87171;
+            --green: #34d399;
+            --accent-glow: rgba(56, 189, 248, 0.4);
+            --input-bg: #1e293b;
+            --input-border: #334155;
+            --input-focus: #27354f;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
         
         body { 
@@ -26,12 +55,11 @@
             height: calc(var(--vh, 1vh) * 100); 
             overflow: hidden; 
             position: relative; 
+            transition: background 0.3s, color 0.3s;
         }
         
         .msg, .post-card, .comment-card, .chat-item { 
             -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
         }
 
@@ -49,14 +77,14 @@
         #feed-screen, #list-screen, #settings-screen { padding-bottom: 85px; }
         #chat-window, #comments-window { padding-bottom: 0; }
 
-        header { padding: 15px; background: var(--card); border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; }
+        header { padding: 15px; background: var(--card); border-bottom: 1px solid var(--input-border); display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; transition: background 0.3s; }
         
         .btn { background: var(--accent); color: #000; border: none; padding: 12px 24px; border-radius: 30px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn:active { transform: scale(0.96); opacity: 0.9; }
         
-        .fab-btn { position: fixed; bottom: 100px; right: 20px; border-radius: 50%; width: 56px; height: 56px; font-size: 24px; z-index: 99; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4); }
+        .fab-btn { position: fixed; bottom: 100px; right: 20px; border-radius: 50%; width: 56px; height: 56px; font-size: 24px; z-index: 99; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px var(--accent-glow); }
 
-        #bottom-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; height: 70px; background: rgba(18, 18, 18, 0.8); display: none; border-radius: 35px; border: 1px solid #252525; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        #bottom-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 450px; height: 70px; background: var(--card); display: none; border-radius: 35px; border: 1px solid var(--input-border); z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); opacity: 0.95; }
         #bottom-nav.visible { display: flex; }
         .nav-btn { flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--gray); border-radius: 35px; transition: 0.1s; }
         .nav-btn.active { color: var(--accent); }
@@ -64,25 +92,25 @@
         .nav-btn span { font-size: 10px; margin-top: 4px; font-weight: bold; }
         
         #chat-list, #feed-container, #comments-list { flex: 1; overflow-y: auto; padding: 5px 0; }
-        .chat-item, .post-card, .comment-card { padding: 16px; border-bottom: 1px solid #1a1a1a; background: var(--card); margin: 10px 14px; border-radius: 18px; position: relative; }
+        .chat-item, .post-card, .comment-card { padding: 16px; border-bottom: 1px solid var(--input-border); background: var(--card); margin: 10px 14px; border-radius: 18px; position: relative; transition: background 0.3s; }
         
-        .post-card.admin-post { border: 1px solid rgba(255, 140, 0, 0.4); box-shadow: 0 4px 20px rgba(255, 140, 0, 0.1); }
+        .post-card.admin-post { border: 1px solid var(--accent-glow); box-shadow: 0 4px 20px var(--accent-glow); }
         .admin-badge { background: var(--accent); color: #000; font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: bold; margin-left: 5px; text-transform: uppercase; vertical-align: middle; }
 
         .avatar { width: 44px; height: 44px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold; font-size: 18px; flex-shrink: 0; }
         
-        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: #050505; }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: var(--bg); }
         .msg { max-width: 78%; padding: 11px 15px; border-radius: 20px; font-size: 15px; position: relative; display: flex; flex-direction: column; line-height: 1.4; }
-        .in { align-self: flex-start; background: #1c1c1e; border-bottom-left-radius: 5px; }
+        .in { align-self: flex-start; background: var(--card); color: var(--text); border-bottom-left-radius: 5px; border: 1px solid var(--input-border); }
         .out { align-self: flex-end; background: var(--accent); color: #000; border-bottom-right-radius: 5px; }
         .msg-time { font-size: 9px; align-self: flex-end; margin-top: 5px; opacity: 0.6; }
         
-        .input-bar { padding: 12px 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid #222; flex-shrink: 0; align-items: center; }
+        .input-bar { padding: 12px 15px; background: var(--card); display: flex; gap: 10px; border-top: 1px solid var(--input-border); flex-shrink: 0; align-items: center; transition: background 0.3s; }
         
         input[type="text"], input[type="email"], input[type="password"], textarea { 
-            width: 100%; padding: 14px 20px; border-radius: 25px; background:#181818; border:1px solid #282828; color:#fff; outline: none; font-size: 15px; transition: 0.2s;
+            width: 100%; padding: 14px 20px; border-radius: 25px; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text); outline: none; font-size: 15px; transition: 0.2s;
         }
-        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, textarea:focus { border-color: var(--accent); background: #1f1f1f; }
+        input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, textarea:focus { border-color: var(--accent); background: var(--input-focus); }
         
         textarea { resize: none; border-radius: 18px; height: 100px; font-family: sans-serif; }
 
@@ -92,17 +120,20 @@
         .last-msg-preview { color: var(--gray); font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-        .modal-box { background: var(--card); width: 88%; max-width: 400px; padding: 25px; border-radius: 28px; text-align: center; border: 1px solid #252525; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        .modal-box { background: var(--card); width: 88%; max-width: 400px; padding: 25px; border-radius: 28px; text-align: center; border: 1px solid var(--input-border); box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
         .modal-box h3 { margin-bottom: 20px; color: var(--accent); font-size: 20px; }
         
-        .context-menu { position: fixed; background: #1f1f1f; border-radius: 16px; padding: 6px; display: none; flex-direction: column; z-index: 3000; border: 1px solid #333; width: 190px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .context-item { padding: 12px 14px; color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-radius: 10px; }
-        .context-item:active { background: #2a2a2a; }
+        .context-menu { position: fixed; background: var(--card); border-radius: 16px; padding: 6px; display: none; flex-direction: column; z-index: 3000; border: 1px solid var(--input-border); width: 190px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .context-item { padding: 12px 14px; color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-radius: 10px; }
+        .context-item:active { background: var(--input-focus); }
         .context-item.del { color: var(--red); }
         .online-tag { font-size: 11px; color: var(--green); margin-top: 2px; font-weight: 500; }
         .offline-tag { font-size: 11px; color: var(--gray); margin-top: 2px; }
         
-        .profile-field { display: flex; justify-content: space-between; align-items: center; background: #181818; padding: 14px 16px; border-radius: 14px; margin-bottom: 14px; border: 1px solid #222; }
+        .profile-field { display: flex; justify-content: space-between; align-items: center; background: var(--input-bg); padding: 14px 16px; border-radius: 14px; margin-bottom: 14px; border: 1px solid var(--input-border); }
+        
+        .theme-option { display: flex; align-items: center; justify-content: space-between; background: var(--input-bg); padding: 14px 18px; border-radius: 14px; margin-bottom: 10px; border: 1px solid var(--input-border); cursor: pointer; }
+        .theme-option:active { opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -148,9 +179,10 @@
         <button class="btn fab-btn" onclick="app.toggleModal('search-modal', true)"><i class="fas fa-plus"></i></button>
     </div>
 
+    <!-- Экран Профиля и Настроек -->
     <div id="settings-screen" class="screen">
         <header><b style="color:var(--accent); font-size:22px;">ПРОФИЛЬ</b></header>
-        <div style="background: var(--card); margin: 15px; padding: 20px; border-radius: 20px; border-left: 5px solid var(--accent); overflow-y: auto;">
+        <div style="background: var(--card); margin: 15px; padding: 20px; border-radius: 20px; border-left: 5px solid var(--accent); overflow-y: auto; transition: background 0.3s;">
             <div style="color: var(--accent); font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Имя</div>
             <div class="profile-field">
                 <span id="prof-name" style="font-size: 18px; font-weight: bold;">...</span>
@@ -158,15 +190,43 @@
             </div>
             <div style="color: var(--accent); font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Никнейм</div>
             <div class="profile-field">
-                <span id="prof-nick" style="font-size: 16px; color:#aaa;">@...</span>
+                <span id="prof-nick" style="font-size: 16px; color:var(--gray);">@...</span>
                 <i class="fas fa-pen" style="color:var(--accent); cursor:pointer;" onclick="app.editProfileField('nickname')"></i>
             </div>
             <div style="color: var(--accent); font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Электронная почта</div>
             <div class="profile-field">
-                <span id="prof-email" style="font-size: 15px; color:#aaa;">***********</span>
+                <span id="prof-email" style="font-size: 15px; color:var(--gray);">***********</span>
                 <i id="email-eye" class="fas fa-eye" style="color:var(--accent); cursor:pointer;" onclick="app.toggleEmailVisibility()"></i>
             </div>
-            <button class="btn" style="background:var(--red); color:white; width:100%; margin-top:20px; border-radius:12px;" onclick="app.logout()">ВЫЙТИ ИЗ АККАУНТА</button>
+            
+            <!-- Кнопка Настроек (Тема) -->
+            <button class="btn" style="background:var(--input-bg); color:var(--text); border:1px solid var(--input-border); width:100%; margin-top:10px; border-radius:14px; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="app.toggleModal('theme-modal', true)">
+                <i class="fas fa-palette" style="color:var(--accent);"></i> Настройки темы
+            </button>
+
+            <button class="btn" style="background:var(--red); color:white; width:100%; margin-top:15px; border-radius:12px;" onclick="app.logout()">ВЫЙТИ ИЗ АККАУНТА</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно выбора темы -->
+    <div id="theme-modal" class="modal">
+        <div class="modal-box">
+            <h3>Выбор темы</h3>
+            <div class="theme-option" onclick="app.setTheme('orange')">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:24px; height:24px; border-radius:50%; background:#ff8c00;"></div>
+                    <span style="font-weight:bold;">Оранжево-чёрная</span>
+                </div>
+                <i class="fas fa-check" id="check-orange" style="color:var(--accent);"></i>
+            </div>
+            <div class="theme-option" onclick="app.setTheme('blue')">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:24px; height:24px; border-radius:50%; background:#38bdf8;"></div>
+                    <span style="font-weight:bold;">Голубо-серая</span>
+                </div>
+                <i class="fas fa-check" id="check-blue" style="color:var(--accent); display:none;"></i>
+            </div>
+            <button class="btn" onclick="app.toggleModal('theme-modal', false)" style="width:100%; margin-top:15px; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">ЗАКРЫТЬ</button>
         </div>
     </div>
 
@@ -214,7 +274,7 @@
             <h3>Новая вспышка</h3>
             <textarea id="post-input" placeholder="Что у вас нового?..." autocomplete="off"></textarea>
             <button class="btn" onclick="app.createPost()" style="width:100%; margin-top:15px;">ОПУБЛИКОВАТЬ</button>
-            <button class="btn" onclick="app.toggleModal('post-modal', false)" style="width:100%; margin-top:8px; background:#222; color:#fff;">ОТМЕНА</button>
+            <button class="btn" onclick="app.toggleModal('post-modal', false)" style="width:100%; margin-top:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">ОТМЕНА</button>
         </div>
     </div>
 
@@ -223,7 +283,7 @@
             <h3>Найти собеседника</h3>
             <input type="text" id="search-input" placeholder="@ник..." autocomplete="off">
             <button class="btn" onclick="app.findUser()" style="width:100%; margin-top:15px;">НАЙТИ</button>
-            <button class="btn" onclick="app.toggleModal('search-modal', false)" style="width:100%; margin-top:8px; background:#222; color:#fff;">ОТМЕНА</button>
+            <button class="btn" onclick="app.toggleModal('search-modal', false)" style="width:100%; margin-top:8px; background:var(--input-bg); color:var(--text); border:1px solid var(--input-border);">ОТМЕНА</button>
         </div>
     </div>
 
@@ -258,6 +318,29 @@
             chats: JSON.parse(localStorage.getItem('f_chats') || "{}"),
             dbId: '6a0adb260034b853e4b8', 
             subs: [],
+
+            initTheme() {
+                const savedTheme = localStorage.getItem('f_theme') || 'orange';
+                this.setTheme(savedTheme, false);
+            },
+            setTheme(themeName, save = true) {
+                document.documentElement.setAttribute('data-theme', themeName);
+                if(save) localStorage.setItem('f_theme', themeName);
+
+                // Изменяем мета-тег цвета в строке браузера под тему
+                const metaColor = document.getElementById('meta-theme-color');
+                if(metaColor) {
+                    metaColor.setAttribute('content', themeName === 'blue' ? '#38bdf8' : '#ff8c00');
+                }
+
+                // Галочки в модалке
+                const checkOrange = document.getElementById('check-orange');
+                const checkBlue = document.getElementById('check-blue');
+                if(checkOrange && checkBlue) {
+                    checkOrange.style.display = themeName === 'orange' ? 'block' : 'none';
+                    checkBlue.style.display = themeName === 'blue' ? 'block' : 'none';
+                }
+            },
 
             formatTime(ts) {
                 const d = new Date(ts);
@@ -572,7 +655,7 @@
                     res.documents.forEach(p => {
                         const likesArr = p.likes || [];
                         const isLikedByMe = likesArr.includes(this.myId);
-                        const likeColor = isLikedByMe ? 'var(--red)' : '#fff';
+                        const likeColor = isLikedByMe ? 'var(--red)' : 'var(--text)';
                         
                         const isPostFromAdmin = p.author_nickname === 'hyisa';
 
@@ -590,10 +673,10 @@
                             </div>
                             <div style="font-size:15px; margin-bottom:12px; white-space:pre-wrap; line-height:1.4;">${p.text}</div>
                             <div style="display:flex; gap:12px;">
-                                <button class="btn" style="background:#1a1a1a; border: 1px solid #252525; color:${likeColor}; font-size:12px; padding:8px 16px; border-radius:20px;" onclick="app.toggleLike('${p.$id}')">
+                                <button class="btn" style="background:var(--input-bg); border: 1px solid var(--input-border); color:${likeColor}; font-size:12px; padding:8px 16px; border-radius:20px;" onclick="app.toggleLike('${p.$id}')">
                                     <i class="${isLikedByMe ? 'fas' : 'far'} fa-heart"></i> ${likesArr.length}
                                 </button>
-                                <button class="btn" style="background:#1a1a1a; border: 1px solid #252525; color:#fff; font-size:12px; padding:8px 16px; border-radius:20px;" onclick="app.openComments('${p.$id}')">
+                                <button class="btn" style="background:var(--input-bg); border: 1px solid var(--input-border); color:var(--text); font-size:12px; padding:8px 16px; border-radius:20px;" onclick="app.openComments('${p.$id}')">
                                     <i class="fas fa-comments"></i> Комменты
                                 </button>
                             </div>
@@ -779,6 +862,9 @@
                 location.reload();
             }
         };
+
+        // Инициализируем тему при старте страницы
+        app.initTheme();
 
         window.onclick = (e) => { if(!e.target.closest('.msg') && !e.target.closest('.post-card') && !e.target.closest('.comment-card')) app.closeMenu(); };
         window.onload = async () => {
