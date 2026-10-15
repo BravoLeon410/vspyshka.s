@@ -117,7 +117,7 @@
         .pass-container { position: relative; width: 100%; margin-top: 12px; }
         .pass-container i { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: var(--gray); cursor: pointer; padding: 5px; }
 
-        .last-msg-preview { color: var(--gray); font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+        .last-msg-preview { color: var(--gray); font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
 
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
         .modal-box { background: var(--card); width: 88%; max-width: 400px; padding: 25px; border-radius: 28px; text-align: center; border: 1px solid var(--input-border); box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
@@ -138,7 +138,8 @@
 </head>
 <body>
 
-    <div id="auth-screen" class="screen" style="display:flex; justify-content:center; align-items:center; z-index:20;">
+    <!-- Экран авторизации (по умолчанию скрыт, чтобы не было «мигания») -->
+    <div id="auth-screen" class="screen" style="display:none; justify-content:center; align-items:center; z-index:20;">
         <div id="login-form" style="width:85%; text-align:center;">
             <h1 style="color:var(--accent); font-size:45px; margin-bottom:30px; letter-spacing: 2px;">ВСПЫШКА</h1>
             <input type="email" id="log-email" placeholder="Email" autocomplete="off">
@@ -199,7 +200,6 @@
                 <i id="email-eye" class="fas fa-eye" style="color:var(--accent); cursor:pointer;" onclick="app.toggleEmailVisibility()"></i>
             </div>
             
-            <!-- Кнопка Настроек (Тема) -->
             <button class="btn" style="background:var(--input-bg); color:var(--text); border:1px solid var(--input-border); width:100%; margin-top:10px; border-radius:14px; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="app.toggleModal('theme-modal', true)">
                 <i class="fas fa-palette" style="color:var(--accent);"></i> Настройки темы
             </button>
@@ -327,13 +327,11 @@
                 document.documentElement.setAttribute('data-theme', themeName);
                 if(save) localStorage.setItem('f_theme', themeName);
 
-                // Изменяем мета-тег цвета в строке браузера под тему
                 const metaColor = document.getElementById('meta-theme-color');
                 if(metaColor) {
                     metaColor.setAttribute('content', themeName === 'blue' ? '#38bdf8' : '#ff8c00');
                 }
 
-                // Галочки в модалке
                 const checkOrange = document.getElementById('check-orange');
                 const checkBlue = document.getElementById('check-blue');
                 if(checkOrange && checkBlue) {
@@ -551,20 +549,14 @@
                     const preview = this.chats[id].last_text;
                     const firstLetter = this.chats[id].name ? this.chats[id].name[0].toUpperCase() : '?';
 
-                    d.innerHTML = `<div style="display:flex; align-items:center; gap:15px;">
+                    d.innerHTML = `<div style="display:flex; align-items:center; gap:15px; cursor:pointer;" onclick="app.openChat('${id}', '${this.chats[id].name}')">
                         <div class="avatar">${firstLetter}</div>
-                        <div style="flex:1; min-width:0;" onclick="app.openChat('${id}', '${this.chats[id].name}')">
+                        <div style="flex:1; min-width:0;">
                             <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${this.chats[id].name}</div>
                             <div class="last-msg-preview">${preview}</div>
                         </div>
-                        <i class="fas fa-trash" style="color:var(--gray); padding:10px;" onclick="app.deleteChat('${id}')"></i>
                     </div>`;
                     l.appendChild(d);
-                }
-            },
-            deleteChat(id) {
-                if(confirm("Удалить этот чат из списка у себя?")) {
-                    delete this.chats[id]; this.save(); this.renderList();
                 }
             },
             async openChat(id, name) {
@@ -774,16 +766,12 @@
                     menu.appendChild(editBtn);
                 }
 
+                // Удалять свои сообщения/посты/комменты может владелец (у всех), админ может удалять чужие
                 if(isOwner || isAdmin) {
                     const delBtn = document.createElement('div'); delBtn.className = 'context-item del';
                     delBtn.innerHTML = `<i class="fas fa-trash"></i> Удалить ${type==='msg'?'у всех':''}`;
                     delBtn.onclick = () => { this.deleteItem(type, item); this.closeMenu(); };
                     menu.appendChild(delBtn);
-                } else if(type === 'msg') {
-                    const delLocalBtn = document.createElement('div'); delLocalBtn.className = 'context-item del';
-                    delLocalBtn.innerHTML = `<i class="fas fa-eye-slash"></i> Удалить у себя`;
-                    delLocalBtn.onclick = () => { document.querySelector(`[data-id="${item.$id}"]`)?.remove(); this.closeMenu(); };
-                    menu.appendChild(delLocalBtn);
                 }
 
                 menu.style.display = 'flex';
@@ -863,7 +851,6 @@
             }
         };
 
-        // Инициализируем тему при старте страницы
         app.initTheme();
 
         window.onclick = (e) => { if(!e.target.closest('.msg') && !e.target.closest('.post-card') && !e.target.closest('.comment-card')) app.closeMenu(); };
@@ -873,6 +860,7 @@
                 const user = await account.get();
                 app.init(user);
             } catch (e) { 
+                // Если не вошел — плавно показываем экран авторизации без лишнего мельтешения
                 document.getElementById('auth-screen').style.display = 'flex'; 
             }
         };
