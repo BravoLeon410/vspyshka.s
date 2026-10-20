@@ -116,16 +116,40 @@
             }
         }
 
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; z-index: 10; animation: fadeIn 0.4s ease; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; z-index: 10; }
         .screen.active { display: flex; }
         
+        /* Новая анимация появления чата */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Чат с блюром и прозрачным фоном */
         #chat-window, #comments-window { 
-            background-color: transparent; 
+            background-color: rgba(0, 0, 0, 0.4); /* Полупрозрачный фон */
+            backdrop-filter: blur(25px); /* Сильный блюр */
+            -webkit-backdrop-filter: blur(25px);
             z-index: 100; 
             width: 100%; 
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            background-color: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            
+            /* Паттерн остается на фоне */
+            background-image: 
+                url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z' fill='%23ff8c00' fill-opacity='0.1' transform='rotate(15 20 20)'/%3E%3Cpath d='M90 80l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z' fill='%23ff8c00' fill-opacity='0.08' transform='rotate(-20 90 80)'/%3E%3Cpath d='M60 10l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z' fill='%23ff8c00' fill-opacity='0.05'/%3E%3Cpath d='M10 100l3 6 6 3-6 3-3 6-3-6-6-3 6-3z' fill='%23ff8c00' fill-opacity='0.06' transform='rotate(45 10 100)'/%3E%3C/svg%3E");
+        }
+
+        [data-theme="blue"] #chat-window, [data-theme="blue"] #comments-window {
+            background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z' fill='%2338bdf8' fill-opacity='0.1' transform='rotate(15 20 20)'/%3E%3Cpath d='M90 80l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z' fill='%2338bdf8' fill-opacity='0.08' transform='rotate(-20 90 80)'/%3E%3Cpath d='M60 10l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z' fill='%2338bdf8' fill-opacity='0.05'/%3E%3Cpath d='M10 100l3 6 6 3-6 3-3 6-3-6-6-3 6-3z' fill='%2338bdf8' fill-opacity='0.06' transform='rotate(45 10 100)'/%3E%3C/svg%3E");
+        }
+
+        [data-theme="pink"] #chat-window, [data-theme="pink"] #comments-window {
+            background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z' fill='%23ec4899' fill-opacity='0.1' transform='rotate(15 20 20)'/%3E%3Cpath d='M90 80l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z' fill='%23ec4899' fill-opacity='0.08' transform='rotate(-20 90 80)'/%3E%3Cpath d='M60 10l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z' fill='%23ec4899' fill-opacity='0.05'/%3E%3Cpath d='M10 100l3 6 6 3-6 3-3 6-3-6-6-3 6-3z' fill='%23ec4899' fill-opacity='0.06' transform='rotate(45 10 100)'/%3E%3C/svg%3E");
+        }
+
+        [data-theme="purple"] #chat-window, [data-theme="purple"] #comments-window {
+            background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z' fill='%23a855f7' fill-opacity='0.1' transform='rotate(15 20 20)'/%3E%3Cpath d='M90 80l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z' fill='%23a855f7' fill-opacity='0.08' transform='rotate(-20 90 80)'/%3E%3Cpath d='M60 10l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z' fill='%23a855f7' fill-opacity='0.05'/%3E%3Cpath d='M10 100l3 6 6 3-6 3-3 6-3-6-6-3 6-3z' fill='%23a855f7' fill-opacity='0.06' transform='rotate(45 10 100)'/%3E%3C/svg%3E");
         }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -430,10 +454,6 @@
                     «Код работает — не трогай. Но если он не работает — читай документацию.»
                 </p>
             </div>
-            
-            <div style="text-align: center; color: var(--gray); font-size: 12px; margin-top: 20px;">
-                ВСПЫШКА © 2024
-            </div>
         </aside>
     </div>
 
@@ -595,8 +615,8 @@
                         return alert("Вы запретили уведомления в браузере! Разрешите их в настройках сайта.");
                     }
                 }
-                if (!swRegistration) {
-                    return alert("Ошибка: Service Worker не зарегистрирован (нет файла sw.js?). Пробуем обычный Notification.");
+                if (!swRegistration || !swRegistration.active) {
+                    return alert("Ошибка: Service Worker не активен. Перезагрузите страницу.");
                 }
                 try {
                     swRegistration.active.postMessage({
@@ -801,8 +821,7 @@
                     this.me = await databases.getDocument(this.dbId, 'users', this.myId);
                     document.getElementById('auth-screen').style.display = 'none';
                     
-                    // ВАЖНО: Обновляем виджет при инициализации
-                    this.updateProfileUI(); 
+                    this.updateProfileUI();
 
                     if (typeof window !== 'undefined' && 'Notification' in window && window.Notification) {
                         if (Notification.permission === "default") Notification.requestPermission(); 
@@ -833,7 +852,7 @@
                         if(this.currentOpponentId !== m.sender_id) {
                             const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
                             
-                            if (swRegistration && Notification.permission === "granted") {
+                            if (swRegistration && swRegistration.active && Notification.permission === "granted") {
                                 swRegistration.active.postMessage({
                                     type: 'SHOW_NOTIFICATION',
                                     title: `ВСПЫШКА: ${senderName}`,
