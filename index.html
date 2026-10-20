@@ -424,6 +424,16 @@
         window.addEventListener('orientationchange', resetViewportHeight);
         resetViewportHeight();
 
+        // Регистрация Service Worker для 100% уведомлений
+        let swRegistration = null;
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => { swRegistration = reg; console.log('SW зарегистрирован'); })
+                    .catch(err => console.log('SW ошибка:', err));
+            });
+        }
+
         const app = {
             me: null, myId: null, rawEmail: '', isEmailVisible: false, currentOpponentId: null, activePostId: null,
             currentOpponentData: null, currentMessageForReaction: null,
@@ -433,6 +443,8 @@
             lastSendTime: 0,
             currentHashtagFilter: null,
             unreadCounts: JSON.parse(localStorage.getItem('f_unread') || "{}"),
+            originalTitle: document.title,
+            blinkInterval: null,
 
             initTheme() {
                 const savedTheme = localStorage.getItem('f_theme') || 'orange';
@@ -631,13 +643,42 @@
 
                         this.save(); this.renderList();
 
-                        if(this.currentOpponentId !== m.sender_id && typeof window !== 'undefined' && 'Notification' in window) {
+                        // --- УВЕДОМЛЕНИЯ, ЗВУК, ВИБРАЦИЯ ---
+                        if(this.currentOpponentId !== m.sender_id) {
                             const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
-                            if (Notification.permission === "granted") {
+                            
+                            // 1. Системное уведомление через Service Worker
+                            if (swRegistration && Notification.permission === "granted") {
+                                swRegistration.active.postMessage({
+                                    type: 'SHOW_NOTIFICATION',
+                                    title: `ВСПЫШКА: ${senderName}`,
+                                    body: m.text,
+                                    icon: 'icon-192.png'
+                                });
+                            } else if (Notification.permission === "granted") {
                                 try {
                                     const notif = new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
                                     notif.onclick = () => { window.focus(); notif.close(); this.openChat(m.sender_id, senderName); };
                                 } catch(err) {}
+                            }
+                            
+                            // 2. Вибрация
+                            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+                            // 3. Звук
+                            try { 
+                                const audio = document.getElementById('notif-sound');
+                                audio.currentTime = 0;
+                                audio.play().catch(e => {}); 
+                            } catch(e) {}
+
+                            // 4. Мигание заголовка
+                            if (!this.blinkInterval) {
+                                let isBlinking = false;
+                                this.blinkInterval = setInterval(() => {
+                                    document.title = isBlinking ? '🔴 Новое сообщение!' : this.originalTitle;
+                                    isBlinking = !isBlinking;
+                                }, 1000);
                             }
                         }
                     }
@@ -1252,4 +1293,4 @@
         };
     </script>
 </body>
-</html>ыы
+</html>
