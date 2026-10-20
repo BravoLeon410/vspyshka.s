@@ -29,11 +29,30 @@
             --card-bg: rgba(20, 28, 46, 0.6); --input-bg: rgba(0, 0, 0, 0.3); --input-border: rgba(255, 255, 255, 0.1);
             --accent-glow: rgba(56, 189, 248, 0.4); --blob-1: rgba(56, 189, 248, 0.3); --blob-2: rgba(37, 99, 235, 0.3);
         }
+        [data-theme="pink"] {
+            --bg: #120712; --accent: #ec4899; --text: #fdf2f8; --gray: #cbd5e1; --red: #f43f5e;
+            --glass-bg: rgba(255, 255, 255, 0.03); --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); --glass-blur: 20px;
+            --card-bg: rgba(36, 16, 36, 0.6); --input-bg: rgba(0, 0, 0, 0.3); --input-border: rgba(255, 255, 255, 0.1);
+            --accent-glow: rgba(236, 72, 153, 0.4); --blob-1: rgba(236, 72, 153, 0.3); --blob-2: rgba(168, 85, 247, 0.3);
+        }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         
-        body, button, header, .chat-item, .modal-box, .avatar { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-        .msg span, .post-card div, .comment-card div { -webkit-user-select: text; user-select: text; }
+        /* Запрещаем любое системное выделение, синий балун и дерганья по всему интерфейсу */
+        body, button, header, .chat-item, .modal-box, .avatar, .msg, .post-card, .comment-card { 
+            -webkit-user-select: none; 
+            user-select: none; 
+            -webkit-touch-callout: none; 
+            touch-action: manipulation;
+        }
+        
+        /* Текст внутри сообщений и постов оставляем доступным для чтения, но без случайных синих подсветок при зажатии под наше меню */
+        .msg span, .post-card div, .comment-card div { 
+            -webkit-user-select: none; 
+            user-select: none; 
+            -webkit-touch-callout: none;
+        }
         
         body { background: var(--bg); color: var(--text); height: 100vh; height: calc(var(--vh, 1vh) * 100); overflow: hidden; position: relative; transition: background 0.3s; }
 
@@ -85,11 +104,14 @@
         .avatar { width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent), #ff4500); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 15px var(--accent-glow); border: 2px solid rgba(255,255,255,0.2); overflow: hidden; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         [data-theme="blue"] .avatar { background: linear-gradient(135deg, var(--accent), #2563eb); }
+        [data-theme="pink"] .avatar { background: linear-gradient(135deg, var(--accent), #a855f7); }
         
         #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 1; }
         .msg { max-width: 80%; padding: 12px 18px; border-radius: 22px; font-size: 15px; position: relative; display: flex; flex-direction: column; line-height: 1.5; animation: fadeIn 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .in { align-self: flex-start; background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: var(--text); border-bottom-left-radius: 6px; border: 1px solid var(--glass-border); }
         .out { align-self: flex-end; background: linear-gradient(135deg, var(--accent), #ff6a00); color: #000; border-bottom-right-radius: 6px; box-shadow: 0 5px 20px var(--accent-glow); border: 1px solid rgba(255,255,255,0.3); font-weight: 500; }
+        [data-theme="blue"] .out { background: linear-gradient(135deg, var(--accent), #2563eb); color: #fff; }
+        [data-theme="pink"] .out { background: linear-gradient(135deg, var(--accent), #d946ef); color: #fff; }
         .msg-time { font-size: 10px; align-self: flex-end; margin-top: 6px; opacity: 0.7; font-weight: 600; }
 
         .msg-reactions { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
@@ -248,10 +270,6 @@
                 <i class="fas fa-palette" style="color:var(--accent);"></i> Настройки темы
             </button>
 
-            <button class="btn" style="background:var(--glass-bg); color:var(--text); border:1px solid var(--glass-border); width:100%; margin-top:12px; border-radius:16px; display:flex; align-items:center; justify-content:center; gap:10px; padding: 16px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);" onclick="app.requestNotificationPermission()">
-                <i class="fas fa-bell" style="color:var(--accent);"></i> Включить уведомления
-            </button>
-
             <button class="btn" style="background:rgba(255,68,68,0.1); color:var(--red); border:1px solid rgba(255,68,68,0.3); width:100%; margin-top:30px; border-radius:16px; padding: 16px; font-weight: 700;" onclick="app.logout()">ВЫЙТИ ИЗ АККАУНТА</button>
         </div>
     </div>
@@ -263,16 +281,23 @@
             <div class="theme-option" onclick="app.setTheme('orange')">
                 <div style="display:flex; align-items:center; gap:15px;">
                     <div style="width:26px; height:26px; border-radius:50%; background:#ff8c00; box-shadow: 0 0 15px rgba(255,140,0,0.6);"></div>
-                    <span style="font-weight:700;">Оранжево-чёрная</span>
+                    <span style="font-weight:700;">Оранжевая</span>
                 </div>
                 <i class="fas fa-check" id="check-orange" style="color:var(--accent); font-size: 18px;"></i>
             </div>
             <div class="theme-option" onclick="app.setTheme('blue')">
                 <div style="display:flex; align-items:center; gap:15px;">
                     <div style="width:26px; height:26px; border-radius:50%; background:#38bdf8; box-shadow: 0 0 15px rgba(56,189,248,0.6);"></div>
-                    <span style="font-weight:700;">Голубо-серая</span>
+                    <span style="font-weight:700;">Голубая</span>
                 </div>
                 <i class="fas fa-check" id="check-blue" style="color:var(--accent); display:none; font-size: 18px;"></i>
+            </div>
+            <div class="theme-option" onclick="app.setTheme('pink')">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="width:26px; height:26px; border-radius:50%; background:#ec4899; box-shadow: 0 0 15px rgba(236,72,153,0.6);"></div>
+                    <span style="font-weight:700;">Розовая</span>
+                </div>
+                <i class="fas fa-check" id="check-pink" style="color:var(--accent); display:none; font-size: 18px;"></i>
             </div>
             <button class="btn" onclick="app.toggleModal('theme-modal', false)" style="width:100%; margin-top:20px; background:var(--input-bg); color:var(--text); border:1px solid var(--glass-border); padding: 16px;">ЗАКРЫТЬ</button>
         </div>
@@ -426,23 +451,20 @@
                 document.documentElement.setAttribute('data-theme', themeName);
                 if(save) localStorage.setItem('f_theme', themeName);
                 const metaColor = document.getElementById('meta-theme-color');
-                if(metaColor) metaColor.setAttribute('content', themeName === 'blue' ? '#38bdf8' : '#ff8c00');
+                if(metaColor) {
+                    if(themeName === 'blue') metaColor.setAttribute('content', '#38bdf8');
+                    else if(themeName === 'pink') metaColor.setAttribute('content', '#ec4899');
+                    else metaColor.setAttribute('content', '#ff8c00');
+                }
                 
                 const checkOrange = document.getElementById('check-orange');
                 const checkBlue = document.getElementById('check-blue');
-                if(checkOrange && checkBlue) {
+                const checkPink = document.getElementById('check-pink');
+                if(checkOrange && checkBlue && checkPink) {
                     checkOrange.style.display = themeName === 'orange' ? 'block' : 'none';
                     checkBlue.style.display = themeName === 'blue' ? 'block' : 'none';
+                    checkPink.style.display = themeName === 'pink' ? 'block' : 'none';
                 }
-            },
-
-            requestNotificationPermission() {
-                if ('Notification' in window) {
-                    Notification.requestPermission().then(permission => {
-                        if (permission === 'granted') alert('Уведомления успешно включены!');
-                        else alert('Разрешение на уведомления отклонено.');
-                    });
-                } else alert('Ваш браузер не поддерживает уведомления.');
             },
 
             formatTime(ts) {
@@ -725,452 +747,4 @@
                             Appwrite.Query.and([Appwrite.Query.equal('sender_id', id), Appwrite.Query.equal('receiver_id', this.myId)])
                         ]), Appwrite.Query.orderAsc('timestamp')
                     ]);
-                    res.documents.forEach(m => this.renderMsg(m));
-                } catch(e) { alert("Ошибка загрузки чата."); }
-                resetViewportHeight();
-            },
-            
-            openOpponentProfile() {
-                if(!this.currentOpponentData) return;
-                const u = this.currentOpponentData;
-                document.getElementById('modal-user-name').innerText = u.name;
-                document.getElementById('modal-user-nick').innerText = '@' + (u.nickname || 'unknown');
-                const avatarEl = document.getElementById('modal-user-avatar');
-                const localAvatar = this.localAvatars[u.user_id];
-                if (localAvatar) {
-                    avatarEl.innerHTML = `<img src="${localAvatar}" alt="">`;
-                } else {
-                    avatarEl.innerText = u.name ? u.name[0].toUpperCase() : '?';
-                }
-                this.toggleModal('user-profile-modal', true);
-            },
-
-            startChatFromModal() {
-                if (!this.currentOpponentData) return;
-                const id = this.currentOpponentData.user_id;
-                const name = this.currentOpponentData.name;
-                this.toggleModal('user-profile-modal', false);
-                if (id && id !== this.myId) {
-                    this.chats[id] = { name: name, nick: this.currentOpponentData.nickname };
-                    this.save();
-                    this.openChat(id, name);
-                }
-            },
-
-            renderMsg(m) {
-                const b = document.getElementById('messages');
-                if(document.querySelector(`[data-id="${m.$id}"]`)) return;
-                const isMe = m.sender_id === this.myId;
-                const d = document.createElement('div');
-                d.className = `msg ${isMe ? 'out' : 'in'}`; d.dataset.id = m.$id;
-                
-                let msgText = m.text;
-                let reactionsHtml = '';
-                const reactionMatch = msgText.match(/\n\n\|\|(.*)$/);
-                if (reactionMatch) {
-                    msgText = msgText.replace(reactionMatch[0], '');
-                    const reactions = reactionMatch[1].split('');
-                    reactionsHtml = `<div class="msg-reactions">${reactions.map(r => `<div class="reaction-badge">${r}</div>`).join('')}</div>`;
-                }
-
-                d.innerHTML = `<span>${escapeHTML(msgText)}</span>${reactionsHtml}<span class="msg-time">${this.formatTime(m.timestamp)}</span>`;
-                
-                let timer;
-                const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'msg', m), 600); };
-                const endPress = () => clearTimeout(timer);
-                d.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'msg', m); }); 
-                d.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'msg', m); });
-                d.addEventListener('touchstart', startPress); d.addEventListener('touchend', endPress); d.addEventListener('touchmove', endPress); d.addEventListener('mouseup', endPress); d.addEventListener('mouseleave', endPress);
-                
-                b.appendChild(d); b.scrollTop = b.scrollHeight;
-            },
-            async sendMsg() {
-                const i = document.getElementById('m-input'), t = i.value.trim();
-                if(!t) return;
-                
-                const now = Date.now();
-                if (now - this.lastSendTime < 1000) return alert("Не так быстро! Подожди секунду.");
-                this.lastSendTime = now;
-
-                try {
-                    await databases.createDocument(this.dbId, 'messages', 'unique()', {
-                        sender_id: this.myId, receiver_id: this.currentOpponentId, text: t, timestamp: Date.now()
-                    });
-                    if(this.chats[this.currentOpponentId]) { this.chats[this.currentOpponentId].last_text = t; this.save(); }
-                    i.value = ''; i.style.height = '50px';
-                } catch(e) { alert("Не удалось отправить: " + e.message); }
-            },
-
-            openReactionModal(item) {
-                this.currentMessageForReaction = item;
-                this.toggleModal('reaction-modal', true);
-            },
-            async setReaction(emoji) {
-                this.toggleModal('reaction-modal', false);
-                const item = this.currentMessageForReaction;
-                if (!item) return;
-                
-                try {
-                    const msgDoc = await databases.getDocument(this.dbId, 'messages', item.$id);
-                    let text = msgDoc.text;
-                    const reactionMatch = text.match(/\n\n\|\|(.*)$/);
-                    if (reactionMatch) text = text.replace(reactionMatch[0], '');
-                    text += `\n\n||${emoji}`;
-                    
-                    await databases.updateDocument(this.dbId, 'messages', item.$id, { text: text });
-                    const el = document.querySelector(`[data-id="${item.$id}"]`);
-                    if (el) {
-                        let msgText = text.replace(/\n\n\|\|.*/, '');
-                        let reactionsHtml = `<div class="msg-reactions"><div class="reaction-badge">${emoji}</div></div>`;
-                        el.innerHTML = `<span>${escapeHTML(msgText)}</span>${reactionsHtml}<span class="msg-time">${this.formatTime(item.timestamp)}</span>`;
-                    }
-                } catch(e) { alert("Ошибка реакции: " + e.message); }
-            },
-
-            filterByHashtag(tag) {
-                this.currentHashtagFilter = tag;
-                this.loadFeed();
-            },
-            clearHashtagFilter() {
-                this.currentHashtagFilter = null;
-                this.loadFeed();
-            },
-
-            async createPost() {
-                const i = document.getElementById('post-input'), t = i.value.trim();
-                if(!t) return;
-                try {
-                    await databases.createDocument(this.dbId, 'posts', 'unique()', {
-                        user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now(), likes: []
-                    });
-                    i.value = ''; this.toggleModal('post-modal', false); this.loadFeed();
-                } catch(e) { alert("Ошибка публикации: " + e.message); }
-            },
-            async loadFeed() {
-                const container = document.getElementById('feed-container'); 
-                const filterContainer = document.getElementById('active-filter-container');
-                
-                if (this.currentHashtagFilter) {
-                    filterContainer.innerHTML = `<div class="feed-filter-badge" onclick="app.clearHashtagFilter()">#${this.currentHashtagFilter} <i class="fas fa-times"></i></div>`;
-                } else {
-                    filterContainer.innerHTML = '';
-                }
-
-                document.querySelector('.fab-btn').style.display = 'flex';
-                container.innerHTML = `<div class="skeleton"><div class="sk-line short"></div><div class="sk-line"></div><div class="sk-line medium"></div></div>`;
-
-                try {
-                    const res = await databases.listDocuments(this.dbId, 'posts', [Appwrite.Query.orderDesc('timestamp')]);
-                    container.innerHTML = '';
-                    
-                    let filteredDocs = res.documents;
-                    if (this.currentHashtagFilter) {
-                        filteredDocs = res.documents.filter(p => p.text.toLowerCase().includes(`#${this.currentHashtagFilter.toLowerCase()}`));
-                    }
-
-                    if(filteredDocs.length === 0) {
-                        container.innerHTML = `<div class="empty-state"><i class="fas fa-feather-alt"></i><div>${this.currentHashtagFilter ? 'Нет постов с этим хештегом' : 'Пока нет постов. Создай первый!'}</div></div>`;
-                        return;
-                    }
-
-                    filteredDocs.forEach(p => {
-                        const likesArr = p.likes || [];
-                        const isLikedByMe = likesArr.includes(this.myId);
-                        const likeColor = isLikedByMe ? 'var(--red)' : 'var(--text)';
-                        const isPostFromAdmin = p.author_nickname === 'hyisa';
-                        const localAvatar = this.localAvatars[p.user_id];
-                        const avatarHtml = localAvatar 
-                            ? `<div class="avatar" style="width:36px; height:36px; font-size:14px;"><img src="${localAvatar}" alt=""></div>` 
-                            : `<div class="avatar" style="width:36px; height:36px; font-size:14px;">${p.author_name ? p.author_name[0].toUpperCase() : '?'}</div>`;
-
-                        const card = document.createElement('div');
-                        card.className = `post-card ${isPostFromAdmin ? 'admin-post' : ''}`;
-                        card.innerHTML = `
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    ${avatarHtml}
-                                    <div>
-                                        <b style="font-size: 15px;">${escapeHTML(p.author_name)}</b> 
-                                        <span style="color:var(--gray); font-size:12px; display:block;">@${escapeHTML(p.author_nickname)}</span>
-                                    </div>
-                                    ${isPostFromAdmin ? '<span class="admin-badge"><i class="fas fa-shield-alt"></i> Админ</span>' : ''}
-                                </div>
-                                <div style="color:var(--gray); font-size:12px; font-weight: 500;">${this.formatTime(p.timestamp)}</div>
-                            </div>
-                            <div style="font-size:16px; margin-bottom:16px; white-space:pre-wrap; line-height:1.5;">${parseHashtags(escapeHTML(p.text))}</div>
-                            <div style="display:flex; gap:12px; flex-wrap: wrap;">
-                                <button class="btn like-btn" style="background:var(--input-bg); border: 1px solid var(--glass-border); color:${likeColor}; font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);" onclick="app.toggleLike('${p.$id}', event)">
-                                    <i class="${isLikedByMe ? 'fas' : 'far'} fa-heart"></i> ${likesArr.length}
-                                </button>
-                                <button class="btn" style="background:var(--input-bg); border: 1px solid var(--glass-border); color:var(--text); font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);" onclick="app.openComments('${p.$id}')">
-                                    <i class="fas fa-comments"></i> Комменты
-                                </button>
-                                <button class="btn" style="background:var(--input-bg); border: 1px solid var(--glass-border); color:var(--accent); font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);" onclick="app.startChatWithAuthor('${p.user_id}', '${escapeHTML(p.author_name)}', '${escapeHTML(p.author_nickname)}')">
-                                    <i class="fas fa-envelope"></i>
-                                </button>
-                            </div>
-                        `;
-                        let timer;
-                        const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'post', p), 600); };
-                        const endPress = () => clearTimeout(timer);
-                        card.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'post', p); }); 
-                        card.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'post', p); });
-                        card.addEventListener('touchstart', startPress); card.addEventListener('touchend', endPress); card.addEventListener('touchmove', endPress); card.addEventListener('mouseup', endPress); card.addEventListener('mouseleave', endPress);
-                        container.appendChild(card);
-                    });
-                } catch(e) {
-                    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--gray); font-weight:500;">Ошибка загрузки ленты.</div>`;
-                }
-            },
-            async toggleLike(postId, event) {
-                const btn = event ? event.currentTarget : null;
-                if (!btn) return;
-
-                // 1. Сразу считываем текущее состояние с кнопки (визуально)
-                const currentLikes = parseInt(btn.innerText.trim()) || 0;
-                const isCurrentlyLiked = btn.querySelector('i').classList.contains('fas');
-                const newIsLiked = !isCurrentlyLiked;
-                const newCount = newIsLiked ? currentLikes + 1 : currentLikes - 1;
-
-                // 2. Мгновенно обновляем кнопку (Оптимистичный UI)
-                btn.innerHTML = `<i class="${newIsLiked ? 'fas' : 'far'} fa-heart"></i> ${newCount}`;
-                btn.style.color = newIsLiked ? 'var(--red)' : 'var(--text)';
-
-                // 3. Анимация сердечка
-                if (newIsLiked) {
-                    const pop = document.createElement('span');
-                    pop.className = 'heart-pop';
-                    pop.innerText = '❤️';
-                    pop.style.position = 'absolute';
-                    pop.style.left = '50%';
-                    pop.style.top = '50%';
-                    pop.style.transform = 'translate(-50%, -50%)';
-                    pop.style.fontSize = '20px';
-                    pop.style.pointerEvents = 'none';
-                    pop.style.animation = 'heartPop 0.6s ease-out forwards';
-                    btn.style.position = 'relative'; 
-                    btn.appendChild(pop);
-                    setTimeout(() => pop.remove(), 600);
-                }
-
-                // 4. В фоне отправляем запрос на сервер
-                try {
-                    const post = await databases.getDocument(this.dbId, 'posts', postId);
-                    let newLikes = post.likes || [];
-                    const myIndex = newLikes.indexOf(this.myId);
-                    if (newIsLiked) {
-                        if (myIndex === -1) newLikes.push(this.myId);
-                    } else {
-                        if (myIndex > -1) newLikes.splice(myIndex, 1);
-                    }
-                    await databases.updateDocument(this.dbId, 'posts', postId, { likes: newLikes });
-                } catch(e) { 
-                    // 5. Если сервер выдал ошибку — откатываем изменения обратно
-                    alert("Не удалось сохранить лайк (сервер недоступен). Изменения отменены.");
-                    btn.innerHTML = `<i class="${isCurrentlyLiked ? 'fas' : 'far'} fa-heart"></i> ${currentLikes}`;
-                    btn.style.color = isCurrentlyLiked ? 'var(--red)' : 'var(--text)';
-                }
-            },
-            
-            async startChatWithAuthor(userId, name, nick) {
-                if (userId === this.myId) return alert("Это вы!");
-                this.chats[userId] = { name: name, nick: nick };
-                this.save();
-                this.openChat(userId, name);
-            },
-
-            async openComments(postId) {
-                this.activePostId = postId;
-                history.pushState({ comments: postId }, "", `#comments-${postId}`);
-                document.querySelector('.fab-btn').style.display = 'none';
-                document.getElementById('bottom-nav').classList.remove('visible');
-                document.getElementById('comments-window').classList.add('active');
-                const box = document.getElementById('comments-list'); box.innerHTML = '';
-                
-                try {
-                    const res = await databases.listDocuments(this.dbId, 'comments', [
-                        Appwrite.Query.equal('post_id', postId), Appwrite.Query.orderAsc('timestamp')
-                    ]);
-                    res.documents.forEach(c => this.renderComment(c));
-                } catch(e) { box.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><div>Ошибка загрузки.</div></div>`; }
-                resetViewportHeight();
-            },
-            renderComment(c) {
-                const box = document.getElementById('comments-list');
-                const card = document.createElement('div'); card.className = 'comment-card';
-                card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--gray); margin-bottom:8px;">
-                        <b>${escapeHTML(c.author_name)} (@${escapeHTML(c.author_nickname)})</b>
-                        <span>${this.formatTime(c.timestamp)}</span>
-                    </div>
-                    <div style="font-size:15px; line-height:1.5; white-space:pre-wrap;">${escapeHTML(c.text)}</div>
-                `;
-                let timer;
-                const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'comment', c), 600); };
-                const endPress = () => clearTimeout(timer);
-                card.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'comment', c); }); 
-                card.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'comment', c); });
-                card.addEventListener('touchstart', startPress); card.addEventListener('touchend', endPress); card.addEventListener('touchmove', endPress); card.addEventListener('mouseup', endPress); card.addEventListener('mouseleave', endPress);
-                box.appendChild(card);
-            },
-            async sendComment() {
-                const i = document.getElementById('comment-input'), t = i.value.trim();
-                if(!t) return;
-                try {
-                    const res = await databases.createDocument(this.dbId, 'comments', 'unique()', {
-                        post_id: this.activePostId, user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now()
-                    });
-                    i.value = ''; i.style.height = '50px'; this.renderComment(res);
-                } catch(e) { alert("Ошибка: " + e.message); }
-            },
-            closeComments() { 
-                document.getElementById('comments-window').classList.remove('active'); 
-                document.getElementById('bottom-nav').classList.add('visible');
-                document.querySelector('.fab-btn').style.display = 'flex';
-                this.activePostId = null; resetViewportHeight();
-            },
-
-            showMenu(e, type, item) {
-                e.preventDefault();
-                const menu = document.getElementById('context-menu'); menu.innerHTML = '';
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                
-                if (type === 'msg') {
-                    const reactBtn = document.createElement('div'); reactBtn.className = 'context-item';
-                    reactBtn.innerHTML = `<i class="fas fa-smile"></i> Реакция`;
-                    reactBtn.onclick = () => { this.openReactionModal(item); this.closeMenu(); };
-                    menu.appendChild(reactBtn);
-                }
-
-                const copyBtn = document.createElement('div'); copyBtn.className = 'context-item';
-                copyBtn.innerHTML = `<i class="fas fa-copy"></i> Копировать`;
-                copyBtn.onclick = () => { navigator.clipboard.writeText(item.text); this.closeMenu(); };
-                menu.appendChild(copyBtn);
-
-                const isAdmin = this.me && this.me.nickname === 'hyisa';
-                const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
-
-                if(isOwner) {
-                    const editBtn = document.createElement('div'); editBtn.className = 'context-item';
-                    editBtn.innerHTML = `<i class="fas fa-edit"></i> Редактировать`;
-                    editBtn.onclick = () => { this.editItem(type, item); this.closeMenu(); };
-                    menu.appendChild(editBtn);
-                }
-
-                if(isOwner || isAdmin) {
-                    const delBtn = document.createElement('div'); delBtn.className = 'context-item del';
-                    delBtn.innerHTML = `<i class="fas fa-trash"></i> Удалить ${type==='msg'?'у всех':''}`;
-                    delBtn.onclick = () => { this.confirmDelete(type, item); this.closeMenu(); };
-                    menu.appendChild(delBtn);
-                }
-
-                menu.style.display = 'flex';
-                menu.style.top = (clientY > window.innerHeight - 180 ? clientY - 150 : clientY) + 'px';
-                menu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
-            },
-            closeMenu() { document.getElementById('context-menu').style.display = 'none'; },
-            
-            confirmDelete(type, item) {
-                const modal = document.getElementById('confirm-modal');
-                const yesBtn = document.getElementById('confirm-yes-btn');
-                modal.style.display = 'flex';
-                yesBtn.onclick = async () => {
-                    this.toggleModal('confirm-modal', false);
-                    const isAdmin = this.me && this.me.nickname === 'hyisa';
-                    const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
-                    if (!isOwner && !isAdmin) return alert("Нет прав!");
-                    const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
-                    try {
-                        await databases.deleteDocument(this.dbId, coll, item.$id);
-                        if(type === 'post') this.loadFeed();
-                        if(type === 'comment') this.openComments(this.activePostId);
-                        if(type === 'msg') document.querySelector(`[data-id="${item.$id}"]`)?.remove();
-                    } catch(e) { alert("Ошибка удаления: " + e.message); }
-                };
-            },
-            
-            async editItem(type, item) {
-                const newText = prompt("Редактировать:", item.text);
-                if(!newText || newText.trim() === item.text) return;
-                const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
-                if (!isOwner) return alert("Только свои!");
-                const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
-                try {
-                    await databases.updateDocument(this.dbId, coll, item.$id, { text: newText.trim() });
-                    if(type === 'post') this.loadFeed();
-                    if(type === 'comment') this.openComments(this.activePostId);
-                    if(type === 'msg') {
-                        const el = document.querySelector(`[data-id="${item.$id}"] span`);
-                        if(el) el.innerText = newText.trim();
-                    }
-                } catch(e) { alert("Ошибка: " + e.message); }
-            },
-
-            async findUser() {
-                const t = document.getElementById('search-input').value.trim().toLowerCase().replace('@','');
-                if(!t) return;
-                try {
-                    const res = await databases.listDocuments(this.dbId, 'users', [Appwrite.Query.equal('nickname', t)]);
-                    if(res.total > 0) {
-                        const u = res.documents[0];
-                        this.chats[u.user_id] = { name: u.name, nick: u.nickname };
-                        this.save(); this.toggleModal('search-modal', false);
-                        this.openChat(u.user_id, u.name); this.renderList();
-                    } else alert("Пользователь не найден");
-                } catch(e) { alert("Ошибка поиска: " + e.message); }
-            },
-            closeChat() { 
-                this.subs.forEach(s => s()); this.subs = [];
-                this.currentOpponentId = null; this.currentOpponentData = null;
-                document.getElementById('chat-window').classList.remove('active'); 
-                document.getElementById('bottom-nav').classList.add('visible'); 
-                this.renderList(); resetViewportHeight();
-            },
-            toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; },
-            save() { localStorage.setItem('f_chats', JSON.stringify(this.chats)); },
-            async logout() {
-                try { await account.deleteSession('current'); } catch(e){}
-                localStorage.clear(); location.reload();
-            }
-        };
-
-        app.initTheme();
-
-        document.addEventListener('input', function (e) {
-            if (e.target.tagName.toLowerCase() === 'textarea' && e.target.classList.contains('msg-textarea')) {
-                e.target.style.height = '50px';
-                e.target.style.height = (e.target.scrollHeight) + 'px';
-            }
-        });
-
-        window.addEventListener('popstate', (e) => {
-            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-            if (document.getElementById('chat-window').classList.contains('active')) {
-                document.getElementById('chat-window').classList.remove('active');
-                document.getElementById('bottom-nav').classList.add('visible');
-                app.currentOpponentId = null; app.currentOpponentData = null;
-                app.subs.forEach(s => s()); app.subs = [];
-                app.renderList(); return;
-            }
-            if (document.getElementById('comments-window').classList.contains('active')) {
-                document.getElementById('comments-window').classList.remove('active');
-                document.getElementById('bottom-nav').classList.add('visible');
-                document.querySelector('.fab-btn').style.display = 'flex';
-                app.activePostId = null; return;
-            }
-            if (e.state && e.state.screen) app.showScreen(e.state.screen);
-        });
-
-        window.onclick = (e) => { 
-            if(!e.target.closest('.msg') && !e.target.closest('.post-card') && !e.target.closest('.comment-card')) app.closeMenu(); 
-        };
-        
-        window.onload = async () => {
-            resetViewportHeight();
-            try { const user = await account.get(); app.init(user); } 
-            catch (e) { document.getElementById('auth-screen').style.display = 'flex'; }
-        };
-    </script>
-</body>
-</html>
+                    res.documents.forEach(m => this.renderMsg(m
