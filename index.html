@@ -165,6 +165,9 @@
 </head>
 <body>
 
+    <!-- Аудио для уведомлений -->
+    <audio id="notif-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
     <div class="bg-blobs">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
@@ -261,6 +264,10 @@
             
             <button class="btn" style="background:var(--glass-bg); color:var(--text); border:1px solid var(--glass-border); width:100%; margin-top:20px; border-radius:16px; display:flex; align-items:center; justify-content:center; gap:10px; padding: 16px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);" onclick="app.toggleModal('theme-modal', true)">
                 <i class="fas fa-palette" style="color:var(--accent);"></i> Настройки темы
+            </button>
+
+            <button class="btn" style="background:var(--glass-bg); color:var(--text); border:1px solid var(--glass-border); width:100%; margin-top:12px; border-radius:16px; display:flex; align-items:center; justify-content:center; gap:10px; padding: 16px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);" onclick="app.requestNotificationPermission()">
+                <i class="fas fa-bell" style="color:var(--accent);"></i> Включить уведомления
             </button>
 
             <button class="btn" style="background:rgba(255,68,68,0.1); color:var(--red); border:1px solid rgba(255,68,68,0.3); width:100%; margin-top:30px; border-radius:16px; padding: 16px; font-weight: 700;" onclick="app.logout()">ВЫЙТИ ИЗ АККАУНТА</button>
@@ -425,6 +432,16 @@
         window.addEventListener('orientationchange', resetViewportHeight);
         resetViewportHeight();
 
+        // === РЕГИСТРАЦИЯ SERVICE WORKER ===
+        let swRegistration = null;
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => { swRegistration = reg; console.log('SW зарегистрирован'); })
+                    .catch(err => console.log('SW ошибка:', err));
+            });
+        }
+
         const app = {
             me: null, myId: null, rawEmail: '', isEmailVisible: false, currentOpponentId: null, activePostId: null,
             currentOpponentData: null, currentMessageForReaction: null,
@@ -434,6 +451,8 @@
             lastSendTime: 0,
             currentHashtagFilter: null,
             unreadCounts: JSON.parse(localStorage.getItem('f_unread') || "{}"),
+            originalTitle: document.title,
+            blinkInterval: null,
 
             initTheme() {
                 const savedTheme = localStorage.getItem('f_theme') || 'orange';
@@ -457,6 +476,15 @@
                     checkBlue.style.display = themeName === 'blue' ? 'block' : 'none';
                     checkPink.style.display = themeName === 'pink' ? 'block' : 'none';
                 }
+            },
+
+            requestNotificationPermission() {
+                if ('Notification' in window) {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') alert('Уведомления успешно включены!');
+                        else alert('Разрешение на уведомления отклонено.');
+                    });
+                } else alert('Ваш браузер не поддерживает уведомления.');
             },
 
             formatTime(ts) {
@@ -632,13 +660,37 @@
 
                         this.save(); this.renderList();
 
-                        if(this.currentOpponentId !== m.sender_id && typeof window !== 'undefined' && 'Notification' in window) {
+                        // --- УВЕДОМЛЕНИЯ, ЗВУК, ВИБРАЦИЯ, МИГАНИЕ ---
+                        if(this.currentOpponentId !== m.sender_id) {
                             const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
-                            if (Notification.permission === "granted") {
-                                try {
-                                    const notif = new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
-                                    notif.onclick = () => { window.focus(); notif.close(); this.openChat(m.sender_id, senderName); };
-                                } catch(err) {}
+                            
+                            // 1. Системное уведомление (через Service Worker, 100% на Android)
+                            if (swRegistration && Notification.permission === "granted") {
+                                swRegistration.active.postMessage({
+                                    type: 'SHOW_NOTIFICATION',
+                                    title: `ВСПЫШКА: ${senderName}`,
+                                    body: m.text,
+                                    icon: 'icon-192.png'
+                                });
+                            }
+                            
+                            // 2. Вибрация
+                            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+                            // 3. Звук
+                            try { 
+                                const audio = document.getElementById('notif-sound');
+                                audio.currentTime = 0;
+                                audio.play().catch(e => {}); 
+                            } catch(e) {}
+
+                            // 4. Мигание заголовка
+                            if (!this.blinkInterval) {
+                                let isBlinking = false;
+                                this.blinkInterval = setInterval(() => {
+                                    document.title = isBlinking ? '🔴 Новое сообщение!' : this.originalTitle;
+                                    isBlinking = !isBlinking;
+                                }, 1000);
                             }
                         }
                     }
@@ -656,7 +708,6 @@
                     allMsgs = res.documents;
                 } catch(e) {}
 
-                // Автоматическая проверка: если пользователя на сервере больше нет, сразу вычищаем его чат (никаких фантомов)
                 let activeOpponentIds = new Set();
                 for (let m of allMsgs) {
                     const oppId = m.sender_id === this.myId ? m.receiver_id : m.sender_id;
@@ -674,7 +725,6 @@
                             };
                         }
                     } catch(err) {
-                        // Пользователь удален на хостинге — удаляем его из локальных чатов
                         delete this.chats[oppId];
                         delete this.unreadCounts[oppId];
                     }
@@ -726,6 +776,12 @@
                 
                 this.unreadCounts[id] = 0;
                 localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
+
+                if (this.blinkInterval) {
+                    clearInterval(this.blinkInterval);
+                    this.blinkInterval = null;
+                    document.title = this.originalTitle;
+                }
 
                 history.pushState({ chat: id, name: name }, "", `#chat-${id}`);
                 document.getElementById('chat-window').classList.add('active');
@@ -910,7 +966,6 @@
                         return;
                     }
 
-                    // Подгружаем аватарки авторов постов из базы данных
                     for (let p of filteredDocs) {
                         if (!this.chats[p.user_id] && p.user_id !== this.myId) {
                             try {
@@ -1193,6 +1248,18 @@
             }
         });
 
+        // Отправка по Enter (Shift+Enter — новая строка)
+        document.addEventListener('keydown', function (e) {
+            if (e.target.id === 'm-input' && e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                app.sendMsg();
+            }
+            if (e.target.id === 'comment-input' && e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                app.sendComment();
+            }
+        });
+
         window.addEventListener('popstate', (e) => {
             document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
             if (document.getElementById('chat-window').classList.contains('active')) {
@@ -1222,4 +1289,4 @@
         };
     </script>
 </body>
-</html>
+</html>ы
