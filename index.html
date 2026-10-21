@@ -614,6 +614,15 @@
                         localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
                     }
                     this.save(); this.renderList();
+                    
+                    // ОБЫЧНЫЕ УВЕДОМЛЕНИЯ (когда вкладка открыта)
+                    if(this.currentOpponentId !== m.sender_id) {
+                        const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
+                        if (Notification.permission === "granted") {
+                            try { new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' }); } catch(err) {}
+                        }
+                        try { const audio = document.getElementById('notif-sound'); audio.currentTime = 0; audio.play().catch(e => {}); } catch(e) {}
+                    }
                 }
             });
         },
@@ -799,10 +808,11 @@
             try {
                 await databases.createDocument(this.dbId, 'messages', 'unique()', { sender_id: this.myId, receiver_id: this.currentOpponentId, text: t, timestamp: Date.now() });
                 
-                // ИСПРАВЛЕННЫЙ URL (без /send_push в конце)
-                fetch('https://vspyshka-s-asky.fra.appwrite.run', {
+                // ИСПОЛЬЗУЕМ no-cors ДЛЯ ОБХОДА БЛОКИРОВКИ
+                fetch('https://vspyshka-s-asky.fra.appwrite.run/send_push', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ receiver_id: this.currentOpponentId, text: t, sender_name: this.me.name })
                 }).catch(err => console.log('Push error:', err));
 
