@@ -13,7 +13,7 @@ module.exports = async function (context) {
 
     const subscription = data.subscription;
     if (!subscription) {
-        return context.res.json({ success: false, error: 'No subscription in request' });
+        return context.res.json({ success: false, error: 'No subscription' });
     }
 
     try {
