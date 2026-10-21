@@ -615,7 +615,7 @@
                     }
                     this.save(); this.renderList();
                     
-                    // ОБЫЧНЫЕ УВЕДОМЛЕНИЯ (когда вкладка открыта)
+                    // ОБЫЧНЫЕ УВЕДОМЛЕНИЯ
                     if(this.currentOpponentId !== m.sender_id) {
                         const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
                         if (Notification.permission === "granted") {
@@ -648,7 +648,7 @@
                         const isReallyOnline = uDoc.is_online && (Date.now() - uDoc.last_seen < 120000);
                         this.chats[oppId] = { 
                             name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '',
-                            is_online: isReallyOnline, last_seen: uDoc.last_seen || 0
+                            is_online: isReallyOnline, last_seen: uDoc.last_seen || 0, push_subscription: uDoc.push_subscription || null
                         };
                     }
                 } catch(err) { 
@@ -808,12 +808,17 @@
             try {
                 await databases.createDocument(this.dbId, 'messages', 'unique()', { sender_id: this.myId, receiver_id: this.currentOpponentId, text: t, timestamp: Date.now() });
                 
-                // ИСПОЛЬЗУЕМ no-cors ДЛЯ ОБХОДА БЛОКИРОВКИ
+                // ОТПРАВЛЯЕМ ПОДПИСКУ ПОЛУЧАТЕЛЯ В ФУНКЦИЮ
+                const oppSub = this.chats[this.currentOpponentId]?.push_subscription;
                 fetch('https://vspyshka-s-asky.fra.appwrite.run/send_push', {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({ receiver_id: this.currentOpponentId, text: t, sender_name: this.me.name })
+                    body: JSON.stringify({ 
+                        subscription: oppSub, 
+                        text: t, 
+                        sender_name: this.me.name 
+                    })
                 }).catch(err => console.log('Push error:', err));
 
                 if(this.chats[this.currentOpponentId]) { this.chats[this.currentOpponentId].last_text = t; this.save(); }
