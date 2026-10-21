@@ -557,469 +557,486 @@
                 this.showScreen('chats'); this.initRealtimeGlobal();
             } catch(e) { alert("Ошибка входа. Проверьте Appwrite."); }
         },
-                    initRealtimeGlobal() {
-                client.subscribe(`databases.${this.dbId}.collections.messages.documents`, async res => {
-                    const m = res.payload;
-                    if (m.receiver_id === this.myId) {
-                        if (!this.chats[m.sender_id]) {
-                            try {
-                                const uDoc = await databases.getDocument(this.dbId, 'users', m.sender_id);
-                                if (uDoc && uDoc.name) this.chats[m.sender_id] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '', last_text: m.text };
-                            } catch(e) { return; }
-                        } else this.chats[m.sender_id].last_text = m.text;
-                        if (this.currentOpponentId !== m.sender_id) {
-                            this.unreadCounts[m.sender_id] = (this.unreadCounts[m.sender_id] || 0) + 1;
-                            localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
+        initRealtimeGlobal() {
+            client.subscribe(`databases.${this.dbId}.collections.messages.documents`, async res => {
+                const m = res.payload;
+                if (m.receiver_id === this.myId) {
+                    if (!this.chats[m.sender_id]) {
+                        try {
+                            const uDoc = await databases.getDocument(this.dbId, 'users', m.sender_id);
+                            if (uDoc && uDoc.name) this.chats[m.sender_id] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '', last_text: m.text };
+                        } catch(e) { return; }
+                    } else this.chats[m.sender_id].last_text = m.text;
+                    if (this.currentOpponentId !== m.sender_id) {
+                        this.unreadCounts[m.sender_id] = (this.unreadCounts[m.sender_id] || 0) + 1;
+                        localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
+                    }
+                    this.save(); this.renderList();
+                    if(this.currentOpponentId !== m.sender_id) {
+                        const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
+                        if (swRegistration && swRegistration.active && Notification.permission === "granted") {
+                            swRegistration.active.postMessage({ type: 'SHOW_NOTIFICATION', title: `ВСПЫШКА: ${senderName}`, body: m.text, icon: 'icon-192.png' });
+                        } else if (Notification.permission === "granted") {
+                            try { new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' }); } catch(err) {}
                         }
-                        this.save(); this.renderList();
-                        if(this.currentOpponentId !== m.sender_id) {
-                            const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
-                            if (swRegistration && swRegistration.active && Notification.permission === "granted") {
-                                swRegistration.active.postMessage({ type: 'SHOW_NOTIFICATION', title: `ВСПЫШКА: ${senderName}`, body: m.text, icon: 'icon-192.png' });
-                            } else if (Notification.permission === "granted") {
-                                try { const notif = new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' }); } catch(err) {}
-                            }
-                            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                            try { const audio = document.getElementById('notif-sound'); audio.currentTime = 0; audio.play().catch(e => {}); } catch(e) {}
-                            if (!this.blinkInterval) {
-                                let isBlinking = false;
-                                this.blinkInterval = setInterval(() => {
-                                    document.title = isBlinking ? '🔴 Новое сообщение!' : this.originalTitle;
-                                    isBlinking = !isBlinking;
-                                }, 1000);
-                            }
+                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                        try { const audio = document.getElementById('notif-sound'); audio.currentTime = 0; audio.play().catch(e => {}); } catch(e) {}
+                        if (!this.blinkInterval) {
+                            let isBlinking = false;
+                            this.blinkInterval = setInterval(() => {
+                                document.title = isBlinking ? '🔴 Новое сообщение!' : this.originalTitle;
+                                isBlinking = !isBlinking;
+                            }, 1000);
                         }
+                    }
+                }
+            });
+        },
+        async renderList() {
+            const l = document.getElementById('chat-list'); l.innerHTML = '';
+            let allMsgs = [];
+            try {
+                const res = await databases.listDocuments(this.dbId, 'messages', [
+                    Appwrite.Query.or([ Appwrite.Query.equal('sender_id', this.myId), Appwrite.Query.equal('receiver_id', this.myId) ]),
+                    Appwrite.Query.orderDesc('timestamp'), Appwrite.Query.limit(100)
+                ]);
+                allMsgs = res.documents.filter(m => m.sender_id && m.receiver_id);
+            } catch(e) {}
+            let activeOpponentIds = new Set();
+            for (let m of allMsgs) {
+                const oppId = m.sender_id === this.myId ? m.receiver_id : m.sender_id;
+                if (oppId && oppId !== this.myId) activeOpponentIds.add(oppId);
+            }
+            for (let oppId of activeOpponentIds) {
+                try {
+                    const uDoc = await databases.getDocument(this.dbId, 'users', oppId);
+                    if (uDoc && uDoc.name) {
+                        const isReallyOnline = uDoc.is_online && (Date.now() - uDoc.last_seen < 120000);
+                        this.chats[oppId] = { 
+                            name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '',
+                            is_online: isReallyOnline, last_seen: uDoc.last_seen || 0
+                        };
+                    }
+                } catch(err) { 
+                    delete this.chats[oppId]; 
+                }
+            }
+            this.save();
+
+            for (let m of allMsgs) {
+                const oppId = m.sender_id === this.myId ? m.receiver_id : m.sender_id;
+                if (this.chats[oppId] && !this.chats[oppId].last_text) this.chats[oppId].last_text = m.text;
+            }
+
+            if(Object.keys(this.chats).length === 0) { 
+                l.innerHTML = `<div class="empty-state"><i class="fas fa-comments"></i><div>Нет чатов. Найди собеседника!</div></div>`; return; 
+            }
+            l.innerHTML = '';
+            
+            for(let id in this.chats) {
+                if (!this.chats[id] || !this.chats[id].name) { delete this.chats[id]; this.save(); continue; }
+                const d = document.createElement('div'); d.className = 'chat-item';
+                const preview = this.chats[id].last_text || 'Нет сообщений';
+                const firstLetter = this.chats[id].name ? this.chats[id].name[0].toUpperCase() : '?';
+                const avatarEl = document.createElement('div'); avatarEl.className = 'avatar';
+                if (isValidAvatar(this.chats[id].avatar)) {
+                    const img = document.createElement('img'); img.src = this.chats[id].avatar; avatarEl.appendChild(img);
+                } else avatarEl.innerText = firstLetter;
+                
+                if (this.chats[id].is_online) { 
+                    const dot = document.createElement('div'); dot.className = 'online-dot'; avatarEl.appendChild(dot); 
+                }
+                
+                const unread = this.unreadCounts[id] || 0;
+                const contentDiv = document.createElement('div'); contentDiv.style.cssText = 'flex:1; min-width:0;';
+                const titleRow = document.createElement('div'); titleRow.style.cssText = 'display:flex; align-items:center;';
+                const nameSpan = document.createElement('div'); nameSpan.style.cssText = 'font-weight:700; font-size: 16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'; nameSpan.innerText = this.chats[id].name;
+                titleRow.appendChild(nameSpan);
+                if (unread > 0) { const unreadSpan = document.createElement('span'); unreadSpan.className = 'unread-badge'; unreadSpan.innerText = unread; titleRow.appendChild(unreadSpan); }
+                const previewDiv = document.createElement('div'); previewDiv.className = 'last-msg-preview'; previewDiv.innerText = preview;
+                contentDiv.appendChild(titleRow); contentDiv.appendChild(previewDiv);
+                const innerWrap = document.createElement('div'); innerWrap.style.cssText = 'display:flex; align-items:center; gap:16px; cursor:pointer;';
+                innerWrap.appendChild(avatarEl); innerWrap.appendChild(contentDiv);
+                innerWrap.addEventListener('click', () => this.openChat(id, this.chats[id].name));
+                d.appendChild(innerWrap); l.appendChild(d);
+            }
+        },
+        async openChat(id, name) {
+            this.subs.forEach(s => s()); this.subs = [];
+            this.currentOpponentId = id; this.unreadCounts[id] = 0;
+            localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
+            history.pushState({ chat: id, name: name }, "", `#chat-${id}`);
+            document.getElementById('chat-window').classList.add('active');
+            document.getElementById('bottom-nav').classList.remove('visible');
+            document.getElementById('chat-title').innerText = name;
+            const statusEl = document.getElementById('chat-status'); statusEl.style.display = 'none';
+            try { 
+                this.currentOpponentData = await databases.getDocument(this.dbId, 'users', id); 
+                const avatarEl = document.getElementById('chat-header-avatar'); avatarEl.innerHTML = '';
+                if (isValidAvatar(this.currentOpponentData.avatar)) {
+                    const img = document.createElement('img'); img.src = this.currentOpponentData.avatar; avatarEl.appendChild(img);
+                } else avatarEl.innerText = name ? name[0].toUpperCase() : '?';
+                
+                const sStatus = client.subscribe(`databases.${this.dbId}.collections.users.documents.${id}`, r => {
+                    if (r.events.some(e=>e.includes('.update'))) {
+                        this.currentOpponentData.is_online = r.payload.is_online;
+                        this.currentOpponentData.last_seen = r.payload.last_seen;
+                        this.updateChatStatusUI();
                     }
                 });
-            },
-            async renderList() {
-                const l = document.getElementById('chat-list'); l.innerHTML = '';
-                let allMsgs = [];
-                try {
-                    const res = await databases.listDocuments(this.dbId, 'messages', [
-                        Appwrite.Query.or([ Appwrite.Query.equal('sender_id', this.myId), Appwrite.Query.equal('receiver_id', this.myId) ]),
-                        Appwrite.Query.orderDesc('timestamp'), Appwrite.Query.limit(100)
-                    ]);
-                    allMsgs = res.documents;
-                } catch(e) {}
-                let activeOpponentIds = new Set();
-                for (let m of allMsgs) {
-                    const oppId = m.sender_id === this.myId ? m.receiver_id : m.sender_id;
-                    activeOpponentIds.add(oppId);
-                }
-                for (let oppId of activeOpponentIds) {
-                    try {
-                        const uDoc = await databases.getDocument(this.dbId, 'users', oppId);
-                        if (uDoc && uDoc.name) this.chats[oppId] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '', is_online: uDoc.is_online || false, last_seen: uDoc.last_seen || 0 };
-                    } catch(err) { delete this.chats[oppId]; delete this.unreadCounts[oppId]; }
-                }
-                this.save(); localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
-                for (let m of allMsgs) {
-                    const oppId = m.sender_id === this.myId ? m.receiver_id : m.sender_id;
-                    if (this.chats[oppId] && !this.chats[oppId].last_text) this.chats[oppId].last_text = m.text;
-                }
-                if(Object.keys(this.chats).length === 0) { 
-                    l.innerHTML = `<div class="empty-state"><i class="fas fa-comments"></i><div>Нет чатов. Найди собеседника!</div></div>`; return; 
-                }
-                l.innerHTML = '';
-                for(let id in this.chats) {
-                    if (!this.chats[id] || !this.chats[id].name) { delete this.chats[id]; this.save(); continue; }
-                    const d = document.createElement('div'); d.className = 'chat-item';
-                    const preview = this.chats[id].last_text || 'Нет сообщений';
-                    const firstLetter = this.chats[id].name ? this.chats[id].name[0].toUpperCase() : '?';
-                    const avatarEl = document.createElement('div'); avatarEl.className = 'avatar';
-                    if (isValidAvatar(this.chats[id].avatar)) {
-                        const img = document.createElement('img'); img.src = this.chats[id].avatar; avatarEl.appendChild(img);
-                    } else avatarEl.innerText = firstLetter;
-                    if (this.chats[id].is_online) { const dot = document.createElement('div'); dot.className = 'online-dot'; avatarEl.appendChild(dot); }
-                    const unread = this.unreadCounts[id] || 0;
-                    const contentDiv = document.createElement('div'); contentDiv.style.cssText = 'flex:1; min-width:0;';
-                    const titleRow = document.createElement('div'); titleRow.style.cssText = 'display:flex; align-items:center;';
-                    const nameSpan = document.createElement('div'); nameSpan.style.cssText = 'font-weight:700; font-size: 16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'; nameSpan.innerText = this.chats[id].name;
-                    titleRow.appendChild(nameSpan);
-                    if (unread > 0) { const unreadSpan = document.createElement('span'); unreadSpan.className = 'unread-badge'; unreadSpan.innerText = unread; titleRow.appendChild(unreadSpan); }
-                    const previewDiv = document.createElement('div'); previewDiv.className = 'last-msg-preview'; previewDiv.innerText = preview;
-                    contentDiv.appendChild(titleRow); contentDiv.appendChild(previewDiv);
-                    const innerWrap = document.createElement('div'); innerWrap.style.cssText = 'display:flex; align-items:center; gap:16px; cursor:pointer;';
-                    innerWrap.appendChild(avatarEl); innerWrap.appendChild(contentDiv);
-                    innerWrap.addEventListener('click', () => this.openChat(id, this.chats[id].name));
-                    d.appendChild(innerWrap); l.appendChild(d);
-                }
-            },
-            async openChat(id, name) {
-                this.subs.forEach(s => s()); this.subs = [];
-                this.currentOpponentId = id; this.unreadCounts[id] = 0;
-                localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
-                history.pushState({ chat: id, name: name }, "", `#chat-${id}`);
-                document.getElementById('chat-window').classList.add('active');
-                document.getElementById('bottom-nav').classList.remove('visible');
-                document.getElementById('chat-title').innerText = name;
-                const statusEl = document.getElementById('chat-status'); statusEl.style.display = 'none';
-                try { 
-                    this.currentOpponentData = await databases.getDocument(this.dbId, 'users', id); 
-                    const avatarEl = document.getElementById('chat-header-avatar'); avatarEl.innerHTML = '';
-                    if (isValidAvatar(this.currentOpponentData.avatar)) {
-                        const img = document.createElement('img'); img.src = this.currentOpponentData.avatar; avatarEl.appendChild(img);
-                    } else avatarEl.innerText = name ? name[0].toUpperCase() : '?';
-                    const sStatus = client.subscribe(`databases.${this.dbId}.collections.users.documents.${id}`, r => {
-                        if (r.events.some(e=>e.includes('.update'))) {
-                            this.currentOpponentData.is_online = r.payload.is_online;
-                            this.currentOpponentData.last_seen = r.payload.last_seen;
-                            this.updateChatStatusUI();
-                        }
-                    });
-                    this.subs.push(sStatus); this.updateChatStatusUI();
-                } catch(e) { 
-                    this.currentOpponentData = { name: name, nickname: this.chats[id]?.nick || 'unknown' };
-                    document.getElementById('chat-header-avatar').innerText = name ? name[0].toUpperCase() : '?';
-                }
-                const box = document.getElementById('messages'); box.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gray);">Загрузка...</div>';
-                try {
-                    const res = await databases.listDocuments(this.dbId, 'messages', [
-                        Appwrite.Query.or([
-                            Appwrite.Query.and([Appwrite.Query.equal('sender_id', this.myId), Appwrite.Query.equal('receiver_id', id)]),
-                            Appwrite.Query.and([Appwrite.Query.equal('sender_id', id), Appwrite.Query.equal('receiver_id', this.myId)])
-                        ]), Appwrite.Query.orderAsc('timestamp'), Appwrite.Query.limit(100)
-                    ]);
-                    box.innerHTML = '';
-                    if (res.documents.length === 0) box.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gray);">Нет сообщений. Напиши первым!</div>';
-                    else res.documents.forEach(m => this.renderMsg(m));
-                } catch(e) { box.innerHTML = `<div style="text-align:center; padding:20px; color:var(--red);">Ошибка загрузки: ${e.message}</div>`; }
-                const s1 = client.subscribe(`databases.${this.dbId}.collections.messages.documents`, r => {
-                    const m = r.payload;
-                    if((m.sender_id===this.myId && m.receiver_id===id) || (m.sender_id===id && m.receiver_id===this.myId)) {
-                        if(r.events.some(e=>e.includes('.create'))) {
-                            if (box.innerHTML.includes('Нет сообщений') || box.innerHTML.includes('Загрузка')) box.innerHTML = '';
-                            this.renderMsg(m);
-                        }
-                        if(r.events.some(e=>e.includes('.delete'))) document.querySelector(`[data-id="${m.$id}"]`)?.remove();
+                this.subs.push(sStatus); this.updateChatStatusUI();
+            } catch(e) { 
+                this.currentOpponentData = { name: name, nickname: this.chats[id]?.nick || 'unknown' };
+                document.getElementById('chat-header-avatar').innerText = name ? name[0].toUpperCase() : '?';
+            }
+            const box = document.getElementById('messages'); box.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gray);">Загрузка...</div>';
+            try {
+                const res = await databases.listDocuments(this.dbId, 'messages', [
+                    Appwrite.Query.or([
+                        Appwrite.Query.and([Appwrite.Query.equal('sender_id', this.myId), Appwrite.Query.equal('receiver_id', id)]),
+                        Appwrite.Query.and([Appwrite.Query.equal('sender_id', id), Appwrite.Query.equal('receiver_id', this.myId)])
+                    ]), Appwrite.Query.orderAsc('timestamp'), Appwrite.Query.limit(100)
+                ]);
+                box.innerHTML = '';
+                if (res.documents.length === 0) box.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gray);">Нет сообщений. Напиши первым!</div>';
+                else res.documents.forEach(m => this.renderMsg(m));
+            } catch(e) { box.innerHTML = `<div style="text-align:center; padding:20px; color:var(--red);">Ошибка загрузки: ${e.message}</div>`; }
+            const s1 = client.subscribe(`databases.${this.dbId}.collections.messages.documents`, r => {
+                const m = r.payload;
+                if((m.sender_id===this.myId && m.receiver_id===id) || (m.sender_id===id && m.receiver_id===this.myId)) {
+                    if(r.events.some(e=>e.includes('.create'))) {
+                        if (box.innerHTML.includes('Нет сообщений') || box.innerHTML.includes('Загрузка')) box.innerHTML = '';
+                        this.renderMsg(m);
                     }
+                    if(r.events.some(e=>e.includes('.delete'))) document.querySelector(`[data-id="${m.$id}"]`)?.remove();
+                }
+            });
+            this.subs.push(s1); resetViewportHeight();
+        },
+        updateChatStatusUI() {
+            const statusEl = document.getElementById('chat-status');
+            if (!this.currentOpponentData) return;
+            const isReallyOnline = this.currentOpponentData.is_online && (Date.now() - this.currentOpponentData.last_seen < 120000);
+            if (isReallyOnline) {
+                statusEl.innerText = 'В сети'; statusEl.style.color = '#22c55e'; statusEl.style.display = 'block';
+            } else if (this.currentOpponentData.last_seen) {
+                statusEl.innerText = this.formatLastSeen(this.currentOpponentData.last_seen); statusEl.style.color = 'var(--gray)'; statusEl.style.display = 'block';
+            } else statusEl.style.display = 'none';
+        },
+        openOpponentProfile() {
+            if(!this.currentOpponentData) return;
+            const u = this.currentOpponentData;
+            document.getElementById('modal-user-name').innerText = u.name;
+            document.getElementById('modal-user-nick').innerText = '@' + (u.nickname || 'unknown');
+            const avatarEl = document.getElementById('modal-user-avatar'); avatarEl.innerHTML = '';
+            if (isValidAvatar(u.avatar)) { const img = document.createElement('img'); img.src = u.avatar; avatarEl.appendChild(img); }
+            else avatarEl.innerText = u.name ? u.name[0].toUpperCase() : '?';
+            this.toggleModal('user-profile-modal', true);
+        },
+        startChatFromModal() {
+            if (!this.currentOpponentData) return;
+            const id = this.currentOpponentData.user_id; const name = this.currentOpponentData.name;
+            this.toggleModal('user-profile-modal', false);
+            if (id && id !== this.myId) {
+                this.chats[id] = { name: name, nick: this.currentOpponentData.nickname, avatar: this.currentOpponentData.avatar || '' };
+                this.save(); this.openChat(id, name);
+            }
+        },
+        renderMsg(m) {
+            const b = document.getElementById('messages');
+            if(document.querySelector(`[data-id="${m.$id}"]`)) return; 
+            const isMe = m.sender_id === this.myId;
+            const d = document.createElement('div'); d.className = `msg ${isMe ? 'out' : 'in'}`; d.dataset.id = m.$id;
+            let msgText = m.text || ''; let reactionsHtml = '';
+            const reactionMatch = msgText.match(/\n\n\|\|(.*)$/);
+            if (reactionMatch) {
+                msgText = msgText.replace(reactionMatch[0], '');
+                const reactions = reactionMatch[1].split('');
+                reactionsHtml = `<div class="msg-reactions">${reactions.map(r => `<div class="reaction-badge">${r}</div>`).join('')}</div>`;
+            }
+            const textSpan = document.createElement('span'); textSpan.innerText = msgText;
+            const timeSpan = document.createElement('span'); timeSpan.className = 'msg-time'; timeSpan.innerText = this.formatTime(m.timestamp);
+            d.appendChild(textSpan); if (reactionsHtml) d.insertAdjacentHTML('beforeend', reactionsHtml); d.appendChild(timeSpan);
+            let timer;
+            const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'msg', m), 600); };
+            const endPress = () => clearTimeout(timer);
+            d.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'msg', m); }); 
+            d.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'msg', m); });
+            d.addEventListener('touchstart', startPress); d.addEventListener('touchend', endPress); d.addEventListener('touchmove', endPress); d.addEventListener('mouseup', endPress); d.addEventListener('mouseleave', endPress);
+            b.appendChild(d); b.scrollTop = b.scrollHeight;
+        },
+        async sendMsg() {
+            const i = document.getElementById('m-input'), t = i.value.trim();
+            if(!t) return;
+            const now = Date.now();
+            if (now - this.lastSendTime < 1000) return alert("Не так быстро! Подожди секунду.");
+            this.lastSendTime = now;
+            try {
+                await databases.createDocument(this.dbId, 'messages', 'unique()', { sender_id: this.myId, receiver_id: this.currentOpponentId, text: t, timestamp: Date.now() });
+                if(this.chats[this.currentOpponentId]) { this.chats[this.currentOpponentId].last_text = t; this.save(); }
+                i.value = ''; i.style.height = '50px';
+            } catch(e) { alert("Не удалось отправить: " + e.message); }
+        },
+        openReactionModal(item) { this.currentMessageForReaction = item; this.toggleModal('reaction-modal', true); },
+        async setReaction(emoji) {
+            this.toggleModal('reaction-modal', false);
+            const item = this.currentMessageForReaction; if (!item) return;
+            try {
+                const msgDoc = await databases.getDocument(this.dbId, 'messages', item.$id);
+                let text = msgDoc.text; const reactionMatch = text.match(/\n\n\|\|(.*)$/);
+                if (reactionMatch) text = text.replace(reactionMatch[0], '');
+                text += `\n\n||${emoji}`;
+                await databases.updateDocument(this.dbId, 'messages', item.$id, { text: text });
+                const el = document.querySelector(`[data-id="${item.$id}"]`);
+                if (el) {
+                    let msgText = text.replace(/\n\n\|\|.*/, ''); el.innerHTML = '';
+                    const span = document.createElement('span'); span.innerText = msgText;
+                    const rHtml = `<div class="msg-reactions"><div class="reaction-badge">${emoji}</div></div>`;
+                    const time = document.createElement('span'); time.className = 'msg-time'; time.innerText = this.formatTime(item.timestamp);
+                    el.appendChild(span); el.insertAdjacentHTML('beforeend', rHtml); el.appendChild(time);
+                }
+            } catch(e) { alert("Ошибка реакции: " + e.message); }
+        },
+        filterByHashtag(tag) { this.currentHashtagFilter = tag; this.loadFeed(); },
+        clearHashtagFilter() { this.currentHashtagFilter = null; this.loadFeed(); },
+        async createPost() {
+            const i = document.getElementById('post-input'), t = i.value.trim(); if(!t) return;
+            try {
+                await databases.createDocument(this.dbId, 'posts', 'unique()', { user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now(), likes: [] });
+                i.value = ''; this.toggleModal('post-modal', false); this.loadFeed();
+            } catch(e) { alert("Ошибка публикации: " + e.message); }
+        },
+        async loadFeed() {
+            const container = document.getElementById('feed-container'); const filterContainer = document.getElementById('active-filter-container');
+            if (this.currentHashtagFilter) filterContainer.innerHTML = `<div class="feed-filter-badge" onclick="app.clearHashtagFilter()">#${this.currentHashtagFilter} <i class="fas fa-times"></i></div>`;
+            else filterContainer.innerHTML = '';
+            document.querySelector('.fab-btn').style.display = 'flex';
+            container.innerHTML = `<div class="skeleton"><div class="sk-line short"></div><div class="sk-line"></div><div class="sk-line medium"></div></div>`;
+            try {
+                const res = await databases.listDocuments(this.dbId, 'posts', [Appwrite.Query.orderDesc('timestamp')]);
+                container.innerHTML = '';
+                let filteredDocs = res.documents;
+                if (this.currentHashtagFilter) filteredDocs = res.documents.filter(p => p.text.toLowerCase().includes(`#${this.currentHashtagFilter.toLowerCase()}`));
+                if(filteredDocs.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><i class="fas fa-feather-alt"></i><div>${this.currentHashtagFilter ? 'Нет постов с этим хештегом' : 'Пока нет постов. Создай первый!'}</div></div>`; return;
+                }
+                for (let p of filteredDocs) {
+                    if (!this.chats[p.user_id] && p.user_id !== this.myId) {
+                        try { const uDoc = await databases.getDocument(this.dbId, 'users', p.user_id); if (uDoc) this.chats[p.user_id] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '' }; } catch(err) {}
+                    }
+                }
+                filteredDocs.forEach(p => {
+                    const likesArr = p.likes || []; const isLikedByMe = likesArr.includes(this.myId);
+                    const isPostFromAdmin = p.author_nickname === 'hyisa';
+                    const authorAvatar = p.user_id === this.myId ? this.me.avatar : (this.chats[p.user_id]?.avatar || '');
+                    const card = document.createElement('div'); card.className = `post-card ${isPostFromAdmin ? 'admin-post' : ''}`;
+                    const topRow = document.createElement('div'); topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;';
+                    const authorInfo = document.createElement('div'); authorInfo.style.cssText = 'display:flex; align-items:center; gap:10px;';
+                    const avatarDiv = document.createElement('div'); avatarDiv.className = 'avatar'; avatarDiv.style.cssText = 'width:36px; height:36px; font-size:14px;';
+                    if (isValidAvatar(authorAvatar)) { const img = document.createElement('img'); img.src = authorAvatar; avatarDiv.appendChild(img); }
+                    else avatarDiv.innerText = p.author_name ? p.author_name[0].toUpperCase() : '?';
+                    const textInfo = document.createElement('div');
+                    const nameB = document.createElement('b'); nameB.style.fontSize = '15px'; nameB.innerText = p.author_name;
+                    const nickSpan = document.createElement('span'); nickSpan.style.cssText = 'color:var(--gray); font-size:12px; display:block;'; nickSpan.innerText = '@' + p.author_nickname;
+                    textInfo.appendChild(nameB); textInfo.appendChild(nickSpan);
+                    authorInfo.appendChild(avatarDiv); authorInfo.appendChild(textInfo);
+                    if (isPostFromAdmin) { const badge = document.createElement('span'); badge.className = 'admin-badge'; badge.innerHTML = '<i class="fas fa-shield-alt"></i> Админ'; authorInfo.appendChild(badge); }
+                    const timeDiv = document.createElement('div'); timeDiv.style.cssText = 'color:var(--gray); font-size:12px; font-weight: 500;'; timeDiv.innerText = this.formatTime(p.timestamp);
+                    topRow.appendChild(authorInfo); topRow.appendChild(timeDiv); card.appendChild(topRow);
+                    const postText = document.createElement('div'); postText.style.cssText = 'font-size:16px; margin-bottom:16px; white-space:pre-wrap; line-height:1.5;';
+                    postText.innerHTML = parseHashtags(escapeHTML(p.text)); card.appendChild(postText);
+                    const actionRow = document.createElement('div'); actionRow.style.cssText = 'display:flex; gap:12px; flex-wrap: wrap;';
+                    const likeBtn = document.createElement('button'); likeBtn.className = 'btn like-btn';
+                    likeBtn.style.cssText = `background:var(--input-bg); border: 1px solid var(--glass-border); color:${isLikedByMe ? 'var(--red)' : 'var(--text)'}; font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);`;
+                    likeBtn.innerHTML = `<i class="${isLikedByMe ? 'fas' : 'far'} fa-heart"></i> ${likesArr.length}`;
+                    likeBtn.addEventListener('click', (e) => this.toggleLike(p.$id, e));
+                    const commBtn = document.createElement('button'); commBtn.className = 'btn';
+                    commBtn.style.cssText = 'background:var(--input-bg); border: 1px solid var(--glass-border); color:var(--text); font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);';
+                    commBtn.innerHTML = '<i class="fas fa-comments"></i> Комменты';
+                    commBtn.addEventListener('click', () => this.openComments(p.$id));
+                    const msgBtn = document.createElement('button'); msgBtn.className = 'btn';
+                    msgBtn.style.cssText = 'background:var(--input-bg); border: 1px solid var(--glass-border); color:var(--accent); font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);';
+                    msgBtn.innerHTML = '<i class="fas fa-envelope"></i>';
+                    msgBtn.addEventListener('click', () => this.startChatWithAuthor(p.user_id, p.author_name, p.author_nickname));
+                    actionRow.appendChild(likeBtn); actionRow.appendChild(commBtn); actionRow.appendChild(msgBtn); card.appendChild(actionRow);
+                    let timer;
+                    const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'post', p), 600); };
+                    const endPress = () => clearTimeout(timer);
+                    card.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'post', p); }); 
+                    card.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'post', p); });
+                    card.addEventListener('touchstart', startPress); card.addEventListener('touchend', endPress); card.addEventListener('touchmove', endPress); card.addEventListener('mouseup', endPress); card.addEventListener('mouseleave', endPress);
+                    container.appendChild(card);
                 });
-                this.subs.push(s1); resetViewportHeight();
-            },
-            updateChatStatusUI() {
-                const statusEl = document.getElementById('chat-status');
-                if (!this.currentOpponentData) return;
-                if (this.currentOpponentData.is_online) {
-                    statusEl.innerText = 'В сети'; statusEl.style.color = '#22c55e'; statusEl.style.display = 'block';
-                } else if (this.currentOpponentData.last_seen) {
-                    statusEl.innerText = this.formatLastSeen(this.currentOpponentData.last_seen); statusEl.style.color = 'var(--gray)'; statusEl.style.display = 'block';
-                } else statusEl.style.display = 'none';
-            },
-            openOpponentProfile() {
-                if(!this.currentOpponentData) return;
-                const u = this.currentOpponentData;
-                document.getElementById('modal-user-name').innerText = u.name;
-                document.getElementById('modal-user-nick').innerText = '@' + (u.nickname || 'unknown');
-                const avatarEl = document.getElementById('modal-user-avatar'); avatarEl.innerHTML = '';
-                if (isValidAvatar(u.avatar)) { const img = document.createElement('img'); img.src = u.avatar; avatarEl.appendChild(img); }
-                else avatarEl.innerText = u.name ? u.name[0].toUpperCase() : '?';
-                this.toggleModal('user-profile-modal', true);
-            },
-            startChatFromModal() {
-                if (!this.currentOpponentData) return;
-                const id = this.currentOpponentData.user_id; const name = this.currentOpponentData.name;
-                this.toggleModal('user-profile-modal', false);
-                if (id && id !== this.myId) {
-                    this.chats[id] = { name: name, nick: this.currentOpponentData.nickname, avatar: this.currentOpponentData.avatar || '' };
-                    this.save(); this.openChat(id, name);
-                }
-            },
-            renderMsg(m) {
-                const b = document.getElementById('messages');
-                if(document.querySelector(`[data-id="${m.$id}"]`)) return; 
-                const isMe = m.sender_id === this.myId;
-                const d = document.createElement('div'); d.className = `msg ${isMe ? 'out' : 'in'}`; d.dataset.id = m.$id;
-                let msgText = m.text || ''; let reactionsHtml = '';
-                const reactionMatch = msgText.match(/\n\n\|\|(.*)$/);
-                if (reactionMatch) {
-                    msgText = msgText.replace(reactionMatch[0], '');
-                    const reactions = reactionMatch[1].split('');
-                    reactionsHtml = `<div class="msg-reactions">${reactions.map(r => `<div class="reaction-badge">${r}</div>`).join('')}</div>`;
-                }
-                const textSpan = document.createElement('span'); textSpan.innerText = msgText;
-                const timeSpan = document.createElement('span'); timeSpan.className = 'msg-time'; timeSpan.innerText = this.formatTime(m.timestamp);
-                d.appendChild(textSpan); if (reactionsHtml) d.insertAdjacentHTML('beforeend', reactionsHtml); d.appendChild(timeSpan);
-                let timer;
-                const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'msg', m), 600); };
-                const endPress = () => clearTimeout(timer);
-                d.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'msg', m); }); 
-                d.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'msg', m); });
-                d.addEventListener('touchstart', startPress); d.addEventListener('touchend', endPress); d.addEventListener('touchmove', endPress); d.addEventListener('mouseup', endPress); d.addEventListener('mouseleave', endPress);
-                b.appendChild(d); b.scrollTop = b.scrollHeight;
-            },
-            async sendMsg() {
-                const i = document.getElementById('m-input'), t = i.value.trim();
-                if(!t) return;
-                const now = Date.now();
-                if (now - this.lastSendTime < 1000) return alert("Не так быстро! Подожди секунду.");
-                this.lastSendTime = now;
-                try {
-                    await databases.createDocument(this.dbId, 'messages', 'unique()', { sender_id: this.myId, receiver_id: this.currentOpponentId, text: t, timestamp: Date.now() });
-                    if(this.chats[this.currentOpponentId]) { this.chats[this.currentOpponentId].last_text = t; this.save(); }
-                    i.value = ''; i.style.height = '50px';
-                } catch(e) { alert("Не удалось отправить: " + e.message); }
-            },
-            openReactionModal(item) { this.currentMessageForReaction = item; this.toggleModal('reaction-modal', true); },
-            async setReaction(emoji) {
-                this.toggleModal('reaction-modal', false);
-                const item = this.currentMessageForReaction; if (!item) return;
-                try {
-                    const msgDoc = await databases.getDocument(this.dbId, 'messages', item.$id);
-                    let text = msgDoc.text; const reactionMatch = text.match(/\n\n\|\|(.*)$/);
-                    if (reactionMatch) text = text.replace(reactionMatch[0], '');
-                    text += `\n\n||${emoji}`;
-                    await databases.updateDocument(this.dbId, 'messages', item.$id, { text: text });
-                    const el = document.querySelector(`[data-id="${item.$id}"]`);
-                    if (el) {
-                        let msgText = text.replace(/\n\n\|\|.*/, ''); el.innerHTML = '';
-                        const span = document.createElement('span'); span.innerText = msgText;
-                        const rHtml = `<div class="msg-reactions"><div class="reaction-badge">${emoji}</div></div>`;
-                        const time = document.createElement('span'); time.className = 'msg-time'; time.innerText = this.formatTime(item.timestamp);
-                        el.appendChild(span); el.insertAdjacentHTML('beforeend', rHtml); el.appendChild(time);
-                    }
-                } catch(e) { alert("Ошибка реакции: " + e.message); }
-            },
-            filterByHashtag(tag) { this.currentHashtagFilter = tag; this.loadFeed(); },
-            clearHashtagFilter() { this.currentHashtagFilter = null; this.loadFeed(); },
-            async createPost() {
-                const i = document.getElementById('post-input'), t = i.value.trim(); if(!t) return;
-                try {
-                    await databases.createDocument(this.dbId, 'posts', 'unique()', { user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now(), likes: [] });
-                    i.value = ''; this.toggleModal('post-modal', false); this.loadFeed();
-                } catch(e) { alert("Ошибка публикации: " + e.message); }
-            },
-            async loadFeed() {
-                const container = document.getElementById('feed-container'); const filterContainer = document.getElementById('active-filter-container');
-                if (this.currentHashtagFilter) filterContainer.innerHTML = `<div class="feed-filter-badge" onclick="app.clearHashtagFilter()">#${this.currentHashtagFilter} <i class="fas fa-times"></i></div>`;
-                else filterContainer.innerHTML = '';
-                document.querySelector('.fab-btn').style.display = 'flex';
-                container.innerHTML = `<div class="skeleton"><div class="sk-line short"></div><div class="sk-line"></div><div class="sk-line medium"></div></div>`;
-                try {
-                    const res = await databases.listDocuments(this.dbId, 'posts', [Appwrite.Query.orderDesc('timestamp')]);
-                    container.innerHTML = '';
-                    let filteredDocs = res.documents;
-                    if (this.currentHashtagFilter) filteredDocs = res.documents.filter(p => p.text.toLowerCase().includes(`#${this.currentHashtagFilter.toLowerCase()}`));
-                    if(filteredDocs.length === 0) {
-                        container.innerHTML = `<div class="empty-state"><i class="fas fa-feather-alt"></i><div>${this.currentHashtagFilter ? 'Нет постов с этим хештегом' : 'Пока нет постов. Создай первый!'}</div></div>`; return;
-                    }
-                    for (let p of filteredDocs) {
-                        if (!this.chats[p.user_id] && p.user_id !== this.myId) {
-                            try { const uDoc = await databases.getDocument(this.dbId, 'users', p.user_id); if (uDoc) this.chats[p.user_id] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '' }; } catch(err) {}
-                        }
-                    }
-                    filteredDocs.forEach(p => {
-                        const likesArr = p.likes || []; const isLikedByMe = likesArr.includes(this.myId);
-                        const isPostFromAdmin = p.author_nickname === 'hyisa';
-                        const authorAvatar = p.user_id === this.myId ? this.me.avatar : (this.chats[p.user_id]?.avatar || '');
-                        const card = document.createElement('div'); card.className = `post-card ${isPostFromAdmin ? 'admin-post' : ''}`;
-                        const topRow = document.createElement('div'); topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;';
-                        const authorInfo = document.createElement('div'); authorInfo.style.cssText = 'display:flex; align-items:center; gap:10px;';
-                        const avatarDiv = document.createElement('div'); avatarDiv.className = 'avatar'; avatarDiv.style.cssText = 'width:36px; height:36px; font-size:14px;';
-                        if (isValidAvatar(authorAvatar)) { const img = document.createElement('img'); img.src = authorAvatar; avatarDiv.appendChild(img); }
-                        else avatarDiv.innerText = p.author_name ? p.author_name[0].toUpperCase() : '?';
-                        const textInfo = document.createElement('div');
-                        const nameB = document.createElement('b'); nameB.style.fontSize = '15px'; nameB.innerText = p.author_name;
-                        const nickSpan = document.createElement('span'); nickSpan.style.cssText = 'color:var(--gray); font-size:12px; display:block;'; nickSpan.innerText = '@' + p.author_nickname;
-                        textInfo.appendChild(nameB); textInfo.appendChild(nickSpan);
-                        authorInfo.appendChild(avatarDiv); authorInfo.appendChild(textInfo);
-                        if (isPostFromAdmin) { const badge = document.createElement('span'); badge.className = 'admin-badge'; badge.innerHTML = '<i class="fas fa-shield-alt"></i> Админ'; authorInfo.appendChild(badge); }
-                        const timeDiv = document.createElement('div'); timeDiv.style.cssText = 'color:var(--gray); font-size:12px; font-weight: 500;'; timeDiv.innerText = this.formatTime(p.timestamp);
-                        topRow.appendChild(authorInfo); topRow.appendChild(timeDiv); card.appendChild(topRow);
-                        const postText = document.createElement('div'); postText.style.cssText = 'font-size:16px; margin-bottom:16px; white-space:pre-wrap; line-height:1.5;';
-                        postText.innerHTML = parseHashtags(escapeHTML(p.text)); card.appendChild(postText);
-                        const actionRow = document.createElement('div'); actionRow.style.cssText = 'display:flex; gap:12px; flex-wrap: wrap;';
-                        const likeBtn = document.createElement('button'); likeBtn.className = 'btn like-btn';
-                        likeBtn.style.cssText = `background:var(--input-bg); border: 1px solid var(--glass-border); color:${isLikedByMe ? 'var(--red)' : 'var(--text)'}; font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);`;
-                        likeBtn.innerHTML = `<i class="${isLikedByMe ? 'fas' : 'far'} fa-heart"></i> ${likesArr.length}`;
-                        likeBtn.addEventListener('click', (e) => this.toggleLike(p.$id, e));
-                        const commBtn = document.createElement('button'); commBtn.className = 'btn';
-                        commBtn.style.cssText = 'background:var(--input-bg); border: 1px solid var(--glass-border); color:var(--text); font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);';
-                        commBtn.innerHTML = '<i class="fas fa-comments"></i> Комменты';
-                        commBtn.addEventListener('click', () => this.openComments(p.$id));
-                        const msgBtn = document.createElement('button'); msgBtn.className = 'btn';
-                        msgBtn.style.cssText = 'background:var(--input-bg); border: 1px solid var(--glass-border); color:var(--accent); font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);';
-                        msgBtn.innerHTML = '<i class="fas fa-envelope"></i>';
-                        msgBtn.addEventListener('click', () => this.startChatWithAuthor(p.user_id, p.author_name, p.author_nickname));
-                        actionRow.appendChild(likeBtn); actionRow.appendChild(commBtn); actionRow.appendChild(msgBtn); card.appendChild(actionRow);
-                        let timer;
-                        const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'post', p), 600); };
-                        const endPress = () => clearTimeout(timer);
-                        card.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'post', p); }); 
-                        card.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'post', p); });
-                        card.addEventListener('touchstart', startPress); card.addEventListener('touchend', endPress); card.addEventListener('touchmove', endPress); card.addEventListener('mouseup', endPress); card.addEventListener('mouseleave', endPress);
-                        container.appendChild(card);
-                    });
-                } catch(e) { container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--gray); font-weight:500;">Ошибка загрузки ленты.</div>`; }
-            },
-            async toggleLike(postId, event) {
-                const btn = event ? event.currentTarget : null; if (!btn) return;
-                const currentLikes = parseInt(btn.innerText.trim()) || 0;
-                const isCurrentlyLiked = btn.querySelector('i').classList.contains('fas');
-                const newIsLiked = !isCurrentlyLiked; const newCount = newIsLiked ? currentLikes + 1 : currentLikes - 1;
-                btn.innerHTML = `<i class="${newIsLiked ? 'fas' : 'far'} fa-heart"></i> ${newCount}`;
-                btn.style.color = newIsLiked ? 'var(--red)' : 'var(--text)';
-                if (newIsLiked) {
-                    const pop = document.createElement('span'); pop.className = 'heart-pop'; pop.innerText = '❤️';
-                    pop.style.position = 'absolute'; pop.style.left = '50%'; pop.style.top = '50%'; pop.style.transform = 'translate(-50%, -50%)';
-                    pop.style.fontSize = '20px'; pop.style.pointerEvents = 'none'; pop.style.animation = 'heartPop 0.6s ease-out forwards';
-                    btn.style.position = 'relative'; btn.appendChild(pop); setTimeout(() => pop.remove(), 600);
-                }
-                try {
-                    const post = await databases.getDocument(this.dbId, 'posts', postId);
-                    let newLikes = post.likes || []; const myIndex = newLikes.indexOf(this.myId);
-                    if (newIsLiked) { if (myIndex === -1) newLikes.push(this.myId); }
-                    else { if (myIndex > -1) newLikes.splice(myIndex, 1); }
-                    await databases.updateDocument(this.dbId, 'posts', postId, { likes: newLikes });
-                } catch(e) { 
-                    alert("Не удалось сохранить лайк. Изменения отменены.");
-                    btn.innerHTML = `<i class="${isCurrentlyLiked ? 'fas' : 'far'} fa-heart"></i> ${currentLikes}`;
-                    btn.style.color = isCurrentlyLiked ? 'var(--red)' : 'var(--text)';
-                }
-            },
-            async startChatWithAuthor(userId, name, nick) {
-                if (userId === this.myId) return alert("Это вы!");
-                try { const uDoc = await databases.getDocument(this.dbId, 'users', userId); this.chats[userId] = { name: name, nick: nick, avatar: uDoc.avatar || '' }; }
-                catch(e) { this.chats[userId] = { name: name, nick: nick, avatar: '' }; }
-                this.save(); this.openChat(userId, name);
-            },
-            async openComments(postId) {
-                this.activePostId = postId; history.pushState({ comments: postId }, "", `#comments-${postId}`);
-                document.querySelector('.fab-btn').style.display = 'none';
-                document.getElementById('bottom-nav').classList.remove('visible');
-                document.getElementById('comments-window').classList.add('active');
-                const box = document.getElementById('comments-list'); box.innerHTML = '';
-                try {
-                    const res = await databases.listDocuments(this.dbId, 'comments', [Appwrite.Query.equal('post_id', postId), Appwrite.Query.orderAsc('timestamp')]);
-                    res.documents.forEach(c => this.renderComment(c));
-                } catch(e) { box.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><div>Ошибка загрузки.</div></div>`; }
-                resetViewportHeight();
-            },
-            renderComment(c) {
-                const box = document.getElementById('comments-list'); const card = document.createElement('div'); card.className = 'comment-card';
-                const header = document.createElement('div'); header.style.cssText = 'display:flex; justify-content:space-between; font-size:13px; color:var(--gray); margin-bottom:8px;';
-                const author = document.createElement('b'); author.innerText = `${c.author_name} (@${c.author_nickname})`;
-                const time = document.createElement('span'); time.innerText = this.formatTime(c.timestamp);
-                header.appendChild(author); header.appendChild(time);
-                const textDiv = document.createElement('div'); textDiv.style.cssText = 'font-size:15px; line-height:1.5; white-space:pre-wrap;'; textDiv.innerText = c.text;
-                card.appendChild(header); card.appendChild(textDiv);
-                let timer;
-                const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'comment', c), 600); };
-                const endPress = () => clearTimeout(timer);
-                card.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'comment', c); }); 
-                card.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'comment', c); });
-                card.addEventListener('touchstart', startPress); card.addEventListener('touchend', endPress); card.addEventListener('touchmove', endPress); card.addEventListener('mouseup', endPress); card.addEventListener('mouseleave', endPress);
-                box.appendChild(card);
-            },
-            async sendComment() {
-                const i = document.getElementById('comment-input'), t = i.value.trim(); if(!t) return;
-                try {
-                    const res = await databases.createDocument(this.dbId, 'comments', 'unique()', { post_id: this.activePostId, user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now() });
-                    i.value = ''; i.style.height = '50px'; this.renderComment(res);
-                } catch(e) { alert("Ошибка: " + e.message); }
-            },
-            closeComments() { 
-                document.getElementById('comments-window').classList.remove('active'); 
-                document.getElementById('bottom-nav').classList.add('visible');
-                document.querySelector('.fab-btn').style.display = 'flex'; this.activePostId = null; resetViewportHeight();
-            },
-            showMenu(e, type, item) {
-                e.preventDefault(); const menu = document.getElementById('context-menu'); menu.innerHTML = '';
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                if (type === 'msg') {
-                    const reactBtn = document.createElement('div'); reactBtn.className = 'context-item'; reactBtn.innerHTML = `<i class="fas fa-smile"></i> Реакция`;
-                    reactBtn.onclick = () => { this.openReactionModal(item); this.closeMenu(); }; menu.appendChild(reactBtn);
-                }
-                const copyBtn = document.createElement('div'); copyBtn.className = 'context-item'; copyBtn.innerHTML = `<i class="fas fa-copy"></i> Копировать`;
-                copyBtn.onclick = () => { navigator.clipboard.writeText(item.text); this.closeMenu(); }; menu.appendChild(copyBtn);
+            } catch(e) { container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--gray); font-weight:500;">Ошибка загрузки ленты.</div>`; }
+        },
+        async toggleLike(postId, event) {
+            const btn = event ? event.currentTarget : null; if (!btn) return;
+            const currentLikes = parseInt(btn.innerText.trim()) || 0;
+            const isCurrentlyLiked = btn.querySelector('i').classList.contains('fas');
+            const newIsLiked = !isCurrentlyLiked; const newCount = newIsLiked ? currentLikes + 1 : currentLikes - 1;
+            btn.innerHTML = `<i class="${newIsLiked ? 'fas' : 'far'} fa-heart"></i> ${newCount}`;
+            btn.style.color = newIsLiked ? 'var(--red)' : 'var(--text)';
+            if (newIsLiked) {
+                const pop = document.createElement('span'); pop.className = 'heart-pop'; pop.innerText = '❤️';
+                pop.style.position = 'absolute'; pop.style.left = '50%'; pop.style.top = '50%'; pop.style.transform = 'translate(-50%, -50%)';
+                pop.style.fontSize = '20px'; pop.style.pointerEvents = 'none'; pop.style.animation = 'heartPop 0.6s ease-out forwards';
+                btn.style.position = 'relative'; btn.appendChild(pop); setTimeout(() => pop.remove(), 600);
+            }
+            try {
+                const post = await databases.getDocument(this.dbId, 'posts', postId);
+                let newLikes = post.likes || []; const myIndex = newLikes.indexOf(this.myId);
+                if (newIsLiked) { if (myIndex === -1) newLikes.push(this.myId); }
+                else { if (myIndex > -1) newLikes.splice(myIndex, 1); }
+                await databases.updateDocument(this.dbId, 'posts', postId, { likes: newLikes });
+            } catch(e) { 
+                alert("Не удалось сохранить лайк. Изменения отменены.");
+                btn.innerHTML = `<i class="${isCurrentlyLiked ? 'fas' : 'far'} fa-heart"></i> ${currentLikes}`;
+                btn.style.color = isCurrentlyLiked ? 'var(--red)' : 'var(--text)';
+            }
+        },
+        async startChatWithAuthor(userId, name, nick) {
+            if (userId === this.myId) return alert("Это вы!");
+            try { const uDoc = await databases.getDocument(this.dbId, 'users', userId); this.chats[userId] = { name: name, nick: nick, avatar: uDoc.avatar || '' }; }
+            catch(e) { this.chats[userId] = { name: name, nick: nick, avatar: '' }; }
+            this.save(); this.openChat(userId, name);
+        },
+        async openComments(postId) {
+            this.activePostId = postId; history.pushState({ comments: postId }, "", `#comments-${postId}`);
+            document.querySelector('.fab-btn').style.display = 'none';
+            document.getElementById('bottom-nav').classList.remove('visible');
+            document.getElementById('comments-window').classList.add('active');
+            const box = document.getElementById('comments-list'); box.innerHTML = '';
+            try {
+                const res = await databases.listDocuments(this.dbId, 'comments', [Appwrite.Query.equal('post_id', postId), Appwrite.Query.orderAsc('timestamp')]);
+                res.documents.forEach(c => this.renderComment(c));
+            } catch(e) { box.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><div>Ошибка загрузки.</div></div>`; }
+            resetViewportHeight();
+        },
+        renderComment(c) {
+            const box = document.getElementById('comments-list'); const card = document.createElement('div'); card.className = 'comment-card';
+            const header = document.createElement('div'); header.style.cssText = 'display:flex; justify-content:space-between; font-size:13px; color:var(--gray); margin-bottom:8px;';
+            const author = document.createElement('b'); author.innerText = `${c.author_name} (@${c.author_nickname})`;
+            const time = document.createElement('span'); time.innerText = this.formatTime(c.timestamp);
+            header.appendChild(author); header.appendChild(time);
+            const textDiv = document.createElement('div'); textDiv.style.cssText = 'font-size:15px; line-height:1.5; white-space:pre-wrap;'; textDiv.innerText = c.text;
+            card.appendChild(header); card.appendChild(textDiv);
+            let timer;
+            const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'comment', c), 600); };
+            const endPress = () => clearTimeout(timer);
+            card.addEventListener('mousedown', (e) => { if(e.button === 2) this.showMenu(e, 'comment', c); }); 
+            card.addEventListener('contextmenu', (e) => { e.preventDefault(); this.showMenu(e, 'comment', c); });
+            card.addEventListener('touchstart', startPress); card.addEventListener('touchend', endPress); card.addEventListener('touchmove', endPress); card.addEventListener('mouseup', endPress); card.addEventListener('mouseleave', endPress);
+            box.appendChild(card);
+        },
+        async sendComment() {
+            const i = document.getElementById('comment-input'), t = i.value.trim(); if(!t) return;
+            try {
+                const res = await databases.createDocument(this.dbId, 'comments', 'unique()', { post_id: this.activePostId, user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now() });
+                i.value = ''; i.style.height = '50px'; this.renderComment(res);
+            } catch(e) { alert("Ошибка: " + e.message); }
+        },
+        closeComments() { 
+            document.getElementById('comments-window').classList.remove('active'); 
+            document.getElementById('bottom-nav').classList.add('visible');
+            document.querySelector('.fab-btn').style.display = 'flex'; this.activePostId = null; resetViewportHeight();
+        },
+        showMenu(e, type, item) {
+            e.preventDefault(); const menu = document.getElementById('context-menu'); menu.innerHTML = '';
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            if (type === 'msg') {
+                const reactBtn = document.createElement('div'); reactBtn.className = 'context-item'; reactBtn.innerHTML = `<i class="fas fa-smile"></i> Реакция`;
+                reactBtn.onclick = () => { this.openReactionModal(item); this.closeMenu(); }; menu.appendChild(reactBtn);
+            }
+            const copyBtn = document.createElement('div'); copyBtn.className = 'context-item'; copyBtn.innerHTML = `<i class="fas fa-copy"></i> Копировать`;
+            copyBtn.onclick = () => { navigator.clipboard.writeText(item.text); this.closeMenu(); }; menu.appendChild(copyBtn);
+            const isAdmin = this.me && this.me.nickname === 'hyisa'; const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
+            if(isOwner) {
+                const editBtn = document.createElement('div'); editBtn.className = 'context-item'; editBtn.innerHTML = `<i class="fas fa-edit"></i> Редактировать`;
+                editBtn.onclick = () => { this.editItem(type, item); this.closeMenu(); }; menu.appendChild(editBtn);
+            }
+            if(isOwner || isAdmin) {
+                const delBtn = document.createElement('div'); delBtn.className = 'context-item del'; delBtn.innerHTML = `<i class="fas fa-trash"></i> Удалить ${type==='msg'?'у всех':''}`;
+                delBtn.onclick = () => { this.confirmDelete(type, item); this.closeMenu(); }; menu.appendChild(delBtn);
+            }
+            menu.style.display = 'flex';
+            menu.style.top = (clientY > window.innerHeight - 180 ? clientY - 150 : clientY) + 'px';
+            menu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
+        },
+        closeMenu() { document.getElementById('context-menu').style.display = 'none'; },
+        confirmDelete(type, item) {
+            const modal = document.getElementById('confirm-modal'); const yesBtn = document.getElementById('confirm-yes-btn');
+            modal.style.display = 'flex';
+            yesBtn.onclick = async () => {
+                this.toggleModal('confirm-modal', false);
                 const isAdmin = this.me && this.me.nickname === 'hyisa'; const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
-                if(isOwner) {
-                    const editBtn = document.createElement('div'); editBtn.className = 'context-item'; editBtn.innerHTML = `<i class="fas fa-edit"></i> Редактировать`;
-                    editBtn.onclick = () => { this.editItem(type, item); this.closeMenu(); }; menu.appendChild(editBtn);
-                }
-                if(isOwner || isAdmin) {
-                    const delBtn = document.createElement('div'); delBtn.className = 'context-item del'; delBtn.innerHTML = `<i class="fas fa-trash"></i> Удалить ${type==='msg'?'у всех':''}`;
-                    delBtn.onclick = () => { this.confirmDelete(type, item); this.closeMenu(); }; menu.appendChild(delBtn);
-                }
-                menu.style.display = 'flex';
-                menu.style.top = (clientY > window.innerHeight - 180 ? clientY - 150 : clientY) + 'px';
-                menu.style.left = Math.min(clientX, window.innerWidth - 200) + 'px';
-            },
-            closeMenu() { document.getElementById('context-menu').style.display = 'none'; },
-            confirmDelete(type, item) {
-                const modal = document.getElementById('confirm-modal'); const yesBtn = document.getElementById('confirm-yes-btn');
-                modal.style.display = 'flex';
-                yesBtn.onclick = async () => {
-                    this.toggleModal('confirm-modal', false);
-                    const isAdmin = this.me && this.me.nickname === 'hyisa'; const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId);
-                    if (!isOwner && !isAdmin) return alert("Нет прав!");
-                    const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
-                    try {
-                        await databases.deleteDocument(this.dbId, coll, item.$id);
-                        if(type === 'post') this.loadFeed(); if(type === 'comment') this.openComments(this.activePostId);
-                        if(type === 'msg') document.querySelector(`[data-id="${item.$id}"]`)?.remove();
-                    } catch(e) { alert("Ошибка удаления: " + e.message); }
-                };
-            },
-            async editItem(type, item) {
-                const newText = prompt("Редактировать:", item.text); if(!newText || newText.trim() === item.text) return;
-                const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId); if (!isOwner) return alert("Только свои!");
+                if (!isOwner && !isAdmin) return alert("Нет прав!");
                 const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
                 try {
-                    await databases.updateDocument(this.dbId, coll, item.$id, { text: newText.trim() });
+                    await databases.deleteDocument(this.dbId, coll, item.$id);
                     if(type === 'post') this.loadFeed(); if(type === 'comment') this.openComments(this.activePostId);
-                    if(type === 'msg') { const el = document.querySelector(`[data-id="${item.$id}"] span`); if(el) el.innerText = newText.trim(); }
-                } catch(e) { alert("Ошибка: " + e.message); }
-            },
-            async findUser() {
-                const t = document.getElementById('search-input').value.trim().toLowerCase().replace('@',''); if(!t) return;
-                try {
-                    const res = await databases.listDocuments(this.dbId, 'users', [Appwrite.Query.equal('nickname', t)]);
-                    if(res.total > 0) {
-                        const u = res.documents[0]; this.chats[u.user_id] = { name: u.name, nick: u.nickname, avatar: u.avatar || '' };
-                        this.save(); this.toggleModal('search-modal', false); this.openChat(u.user_id, u.name); this.renderList();
-                    } else alert("Пользователь не найден");
-                } catch(e) { alert("Ошибка поиска: " + e.message); }
-            },
-            closeChat() { 
-                this.subs.forEach(s => s()); this.subs = []; this.currentOpponentId = null; this.currentOpponentData = null;
-                document.getElementById('chat-window').classList.remove('active'); document.getElementById('bottom-nav').classList.add('visible'); this.renderList(); resetViewportHeight();
-            },
-            toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; },
-            save() { localStorage.setItem('f_chats', JSON.stringify(this.chats)); },
-            async logout() {
-                try { await this.updateStatus(false); await account.deleteSession('current'); } catch(e){}
-                localStorage.clear(); location.reload();
-            }
-        };
-        app.initTheme();
-        document.addEventListener('input', function (e) {
-            if (e.target.tagName.toLowerCase() === 'textarea' && e.target.classList.contains('msg-textarea')) {
-                e.target.style.height = '50px'; e.target.style.height = (e.target.scrollHeight) + 'px';
-            }
-        });
-        document.addEventListener('keydown', function (e) {
-            if (e.target.id === 'm-input' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); app.sendMsg(); }
-            if (e.target.id === 'comment-input' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); app.sendComment(); }
-        });
-        window.addEventListener('popstate', (e) => {
-            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-            if (document.getElementById('chat-window').classList.contains('active')) {
-                document.getElementById('chat-window').classList.remove('active'); document.getElementById('bottom-nav').classList.add('visible');
-                app.currentOpponentId = null; app.currentOpponentData = null; app.subs.forEach(s => s()); app.subs = []; app.renderList(); return;
-            }
-            if (document.getElementById('comments-window').classList.contains('active')) {
-                document.getElementById('comments-window').classList.remove('active'); document.getElementById('bottom-nav').classList.add('visible');
-                document.querySelector('.fab-btn').style.display = 'flex'; app.activePostId = null; return;
-            }
-            if (e.state && e.state.screen) app.showScreen(e.state.screen);
-        });
-        window.onclick = (e) => { if(!e.target.closest('.msg') && !e.target.closest('.post-card') && !e.target.closest('.comment-card')) app.closeMenu(); };
-        window.onload = async () => {
-            resetViewportHeight();
-            try { const user = await account.get(); app.init(user); } 
-            catch (e) { document.getElementById('auth-screen').classList.add('active'); }
-        };
+                    if(type === 'msg') document.querySelector(`[data-id="${item.$id}"]`)?.remove();
+                } catch(e) { alert("Ошибка удаления: " + e.message); }
+            };
+        },
+        async editItem(type, item) {
+            const newText = prompt("Редактировать:", item.text); if(!newText || newText.trim() === item.text) return;
+            const isOwner = (item.user_id === this.myId) || (item.sender_id === this.myId); if (!isOwner) return alert("Только свои!");
+            const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
+            try {
+                await databases.updateDocument(this.dbId, coll, item.$id, { text: newText.trim() });
+                if(type === 'post') this.loadFeed(); if(type === 'comment') this.openComments(this.activePostId);
+                if(type === 'msg') { const el = document.querySelector(`[data-id="${item.$id}"] span`); if(el) el.innerText = newText.trim(); }
+            } catch(e) { alert("Ошибка: " + e.message); }
+        },
+        async findUser() {
+            const t = document.getElementById('search-input').value.trim().toLowerCase().replace('@',''); if(!t) return;
+            try {
+                const res = await databases.listDocuments(this.dbId, 'users', [Appwrite.Query.equal('nickname', t)]);
+                if(res.total > 0) {
+                    const u = res.documents[0]; this.chats[u.user_id] = { name: u.name, nick: u.nickname, avatar: u.avatar || '' };
+                    this.save(); this.toggleModal('search-modal', false); this.openChat(u.user_id, u.name); this.renderList();
+                } else alert("Пользователь не найден");
+            } catch(e) { alert("Ошибка поиска: " + e.message); }
+        },
+        closeChat() { 
+            this.subs.forEach(s => s()); this.subs = []; this.currentOpponentId = null; this.currentOpponentData = null;
+            document.getElementById('chat-window').classList.remove('active'); document.getElementById('bottom-nav').classList.add('visible'); this.renderList(); resetViewportHeight();
+        },
+        toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; },
+        save() { localStorage.setItem('f_chats', JSON.stringify(this.chats)); },
+        async logout() {
+            try { await this.updateStatus(false); await account.deleteSession('current'); } catch(e){}
+            localStorage.clear(); location.reload();
+        }
+    };
+    app.initTheme();
+    document.addEventListener('input', function (e) {
+        if (e.target.tagName.toLowerCase() === 'textarea' && e.target.classList.contains('msg-textarea')) {
+            e.target.style.height = '50px'; e.target.style.height = (e.target.scrollHeight) + 'px';
+        }
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.target.id === 'm-input' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); app.sendMsg(); }
+        if (e.target.id === 'comment-input' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); app.sendComment(); }
+    });
+    window.addEventListener('popstate', (e) => {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        if (document.getElementById('chat-window').classList.contains('active')) {
+            document.getElementById('chat-window').classList.remove('active'); document.getElementById('bottom-nav').classList.add('visible');
+            app.currentOpponentId = null; app.currentOpponentData = null; app.subs.forEach(s => s()); app.subs = []; app.renderList(); return;
+        }
+        if (document.getElementById('comments-window').classList.contains('active')) {
+            document.getElementById('comments-window').classList.remove('active'); document.getElementById('bottom-nav').classList.add('visible');
+            document.querySelector('.fab-btn').style.display = 'flex'; app.activePostId = null; return;
+        }
+        if (e.state && e.state.screen) app.showScreen(e.state.screen);
+    });
+    window.onclick = (e) => { if(!e.target.closest('.msg') && !e.target.closest('.post-card') && !e.target.closest('.comment-card')) app.closeMenu(); };
+    window.onload = async () => {
+        resetViewportHeight();
+        try { const user = await account.get(); app.init(user); } 
+        catch (e) { document.getElementById('auth-screen').classList.add('active'); }
+    };
     </script>
 </body>
 </html>
