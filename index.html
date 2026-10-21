@@ -368,7 +368,7 @@
     client.setEndpoint('https://fra.cloud.appwrite.io/v1').setProject('6a0ad8400006365730b5');        
     const account = new Appwrite.Account(client);
     const databases = new Appwrite.Databases(client);
-    const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'; // Замените на ваш публичный ключ, если тестовый не сработает!
+    const VAPID_PUBLIC_KEY = 'BB3qJQDDIqp93yMhfkcW2t2mUGMYXj1XmoaSxaSF9hD9Zs4Sq5h6VYtdNXtWYbEQIXbgnJ1NoQ5X0SkNOdEtyKk';
 
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -576,8 +576,14 @@
                 document.getElementById('auth-screen').classList.remove('active');
                 document.getElementById('auth-screen').style.display = 'none';
                 this.startHeartbeat(); this.updateProfileUI();
-                if (Notification.permission === "default") Notification.requestPermission().then(p => { if (p === 'granted') this.subscribeToPush(); }); 
-                else if (Notification.permission === "granted") this.subscribeToPush();
+                
+                // ПОДПИСКА НА ПУШИ
+                if (Notification.permission === "default") {
+                    Notification.requestPermission().then(p => { if (p === 'granted') this.subscribeToPush(); }); 
+                } else if (Notification.permission === "granted") {
+                    this.subscribeToPush();
+                }
+
                 history.replaceState({ screen: 'chats' }, "", "#chats");
                 this.showScreen('chats'); this.initRealtimeGlobal();
             } catch(e) { alert("Ошибка входа. Проверьте Appwrite."); }
@@ -597,23 +603,6 @@
                         localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
                     }
                     this.save(); this.renderList();
-                    if(this.currentOpponentId !== m.sender_id) {
-                        const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
-                        if (swRegistration && swRegistration.active && Notification.permission === "granted") {
-                            swRegistration.active.postMessage({ type: 'SHOW_NOTIFICATION', title: `ВСПЫШКА: ${senderName}`, body: m.text, icon: 'icon-192.png' });
-                        } else if (Notification.permission === "granted") {
-                            try { new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' }); } catch(err) {}
-                        }
-                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                        try { const audio = document.getElementById('notif-sound'); audio.currentTime = 0; audio.play().catch(e => {}); } catch(e) {}
-                        if (!this.blinkInterval) {
-                            let isBlinking = false;
-                            this.blinkInterval = setInterval(() => {
-                                document.title = isBlinking ? '🔴 Новое сообщение!' : this.originalTitle;
-                                isBlinking = !isBlinking;
-                            }, 1000);
-                        }
-                    }
                 }
             });
         },
@@ -799,7 +788,7 @@
             try {
                 await databases.createDocument(this.dbId, 'messages', 'unique()', { sender_id: this.myId, receiver_id: this.currentOpponentId, text: t, timestamp: Date.now() });
                 
-                // ТРИГГЕР ДЛЯ ПУШ-УВЕДОМЛЕНИЙ
+                // ВЫЗОВ СЕРВЕРНОЙ ФУНКЦИИ ДЛЯ ПУША
                 fetch('https://vspyshka-s-asky.fra.appwrite.run/send_push', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
