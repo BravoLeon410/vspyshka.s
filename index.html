@@ -29,7 +29,6 @@
         #chat-window, #comments-window { background-color: rgba(0,0,0,0.4); backdrop-filter: blur(25px); z-index: 100; width: 100%; }
         @media (min-width: 1024px) { #chat-window, #comments-window { max-width: 700px; left: 50%; transform: translateX(-50%); border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); } }
         #feed-screen, #list-screen, #settings-screen { padding-bottom: 100px; }
-        @media (min-width: 1024px) { #feed-screen, #list-screen, #settings-screen { padding-bottom: 20px; } }
         header { padding: 0 20px; background: var(--glass-bg); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; height: 70px; flex-shrink: 0; z-index: 10; }
         .header-title b { color: var(--accent); font-size: 24px; letter-spacing: 1px; }
         .header-slogan { font-size: 11px; color: var(--gray); }
@@ -295,7 +294,21 @@
                     this.save(); this.renderList();
                     if(this.currentOpponentId !== m.sender_id) {
                         const sName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
-                        if (Notification.permission === "granted") { try { new Notification(`ВСПЫШКА: ${sName}`, { body: m.text, icon: 'icon-192.png' }); } catch(err) {} }
+                        // ЛОКАЛЬНОЕ УВЕДОМЛЕНИЕ (когда приложение открыто)
+                        if (Notification.permission === "granted") { 
+                            try { 
+                                // Используем Service Worker для показа уведомления, если он активен
+                                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                                    navigator.serviceWorker.controller.postMessage({
+                                        type: 'SHOW_NOTIFICATION',
+                                        title: `ВСПЫШКА: ${sName}`,
+                                        body: m.text
+                                    });
+                                } else {
+                                    new Notification(`ВСПЫШКА: ${sName}`, { body: m.text, icon: 'icon-192.png' }); 
+                                }
+                            } catch(err) { console.error('Notification error:', err); } 
+                        }
                         try { const a = document.getElementById('notif-sound'); a.currentTime=0; a.play(); } catch(e) {}
                     }
                 }
