@@ -478,7 +478,8 @@
                     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
                 });
                 
-                await databases.updateDocument(this.dbId, 'users', this.myId, { push_subscription: JSON.stringify(subscription) });
+                const subscriptionString = JSON.stringify(subscription);
+                await databases.updateDocument(this.dbId, 'users', this.myId, { push_subscription: subscriptionString });
                 alert("Уведомления успешно включены!");
             } catch (e) {
                 console.error('Push error:', e);
@@ -573,7 +574,7 @@
                     if(check.total > 0) return alert("Никнейм занят!");
                     const res = await account.create('unique()', email, pass, name);
                     await account.createEmailPasswordSession(email, pass);
-                    await databases.createDocument(this.dbId, 'users', res.$id, { user_id: res.$id, name: name, nickname: nick, avatar: '', is_online: true, last_seen: Date.now() });
+                    await databases.createDocument(this.dbId, 'users', res.$id, { user_id: res.$id, name: name, nickname: nick, avatar: '', is_online: true, last_seen: Date.now(), push_subscription: '' });
                 } else {
                     await account.createEmailPasswordSession(document.getElementById('log-email').value, document.getElementById('log-pass').value);
                 }
@@ -798,7 +799,8 @@
             try {
                 await databases.createDocument(this.dbId, 'messages', 'unique()', { sender_id: this.myId, receiver_id: this.currentOpponentId, text: t, timestamp: Date.now() });
                 
-                fetch('https://vspyshka-s-asky.fra.appwrite.run/send_push', {
+                // ИСПРАВЛЕННЫЙ URL (без /send_push в конце)
+                fetch('https://vspyshka-s-asky.fra.appwrite.run', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ receiver_id: this.currentOpponentId, text: t, sender_name: this.me.name })
