@@ -6,7 +6,7 @@
     <title>ВСПЫШКА</title>
     
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff8c00" id="meta-theme-color">
+    <meta name="theme-color" content="#050505" id="meta-theme-color">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ВСПЫШКА">
@@ -15,8 +15,8 @@
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        html { background-color: #050505; }
-        body { background-color: var(--bg); }
+        html, body { background-color: #050505; overscroll-behavior: none; }
+        body { background-color: var(--bg); padding-bottom: env(safe-area-inset-bottom); }
 
         :root, [data-theme="orange"] { 
             --bg: #050505; --accent: #ff8c00; --text: #ffffff; --gray: #a1a1aa; --red: #ff4444;
@@ -70,7 +70,6 @@
             overflow: hidden; 
             position: relative; 
             transition: background 0.3s; 
-            
             background-image: 
                 url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z' fill='%23ff8c00' fill-opacity='0.1' transform='rotate(15 20 20)'/%3E%3Cpath d='M90 80l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z' fill='%23ff8c00' fill-opacity='0.08' transform='rotate(-20 90 80)'/%3E%3Cpath d='M60 10l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z' fill='%23ff8c00' fill-opacity='0.05'/%3E%3Cpath d='M10 100l3 6 6 3-6 3-3 6-3-6-6-3 6-3z' fill='%23ff8c00' fill-opacity='0.06' transform='rotate(45 10 100)'/%3E%3C/svg%3E");
             background-repeat: repeat;
@@ -86,11 +85,12 @@
             background-image: radial-gradient(circle at 50% 0%, #0a1e3f 0%, #010a13 100%);
         }
 
+        /* Фикс снега: подняли z-index, чтобы его не перекрывал фон */
         #snow-container {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
-            z-index: -1;
+            z-index: 1; 
             display: none;
             overflow: hidden;
         }
@@ -169,7 +169,6 @@
             width: 100%; 
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
             animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            
             background-image: 
                 url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20l2 5 5 2-5 2-2 5-2-5-5-2 5-2z' fill='%23ff8c00' fill-opacity='0.1' transform='rotate(15 20 20)'/%3E%3Cpath d='M90 80l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z' fill='%23ff8c00' fill-opacity='0.08' transform='rotate(-20 90 80)'/%3E%3Cpath d='M60 10l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z' fill='%23ff8c00' fill-opacity='0.05'/%3E%3Cpath d='M10 100l3 6 6 3-6 3-3 6-3-6-6-3 6-3z' fill='%23ff8c00' fill-opacity='0.06' transform='rotate(45 10 100)'/%3E%3C/svg%3E");
         }
@@ -216,7 +215,7 @@
         .fab-btn.pulse { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--accent-glow); } 70% { box-shadow: 0 0 0 15px rgba(255, 140, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 140, 0, 0); } }
 
-        #bottom-nav { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 400px; height: 72px; background: var(--glass-bg); display: none; border-radius: 35px; border: 1px solid var(--glass-border); z-index: 1000; box-shadow: var(--glass-shadow); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); opacity: 0.95; transition: opacity 0.3s; }
+        #bottom-nav { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 400px; height: 72px; background: var(--glass-bg); display: none; border-radius: 35px; border: 1px solid var(--glass-border); z-index: 1000; box-shadow: var(--glass-shadow); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); opacity: 0.95; transition: opacity 0.3s; padding-bottom: 0; }
         #bottom-nav.visible { display: flex; }
         .nav-btn { flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--gray); border-radius: 35px; transition: 0.2s; }
         .nav-btn.active { color: var(--accent); text-shadow: 0 0 15px var(--accent-glow); transform: scale(1.1); }
@@ -307,7 +306,6 @@
         .empty-state i { font-size: 48px; margin-bottom: 15px; opacity: 0.3; display: block; }
         .empty-state div { font-size: 16px; font-weight: 500; }
 
-        /* Стили для выпадающего списка упоминаний */
         .mention-suggestions {
             position: absolute;
             bottom: 100%;
@@ -341,42 +339,92 @@
             width: 30px; height: 30px; font-size: 12px;
             box-shadow: none; border-width: 1px;
         }
-        .mention-item-info {
-            display: flex; flex-direction: column;
-        }
-        .mention-item-name {
-            font-weight: 700; font-size: 14px; color: var(--text);
-        }
-        .mention-item-nick {
-            font-size: 12px; color: var(--gray);
-        }
+        .mention-item-info { display: flex; flex-direction: column; }
+        .mention-item-name { font-weight: 700; font-size: 14px; color: var(--text); }
+        .mention-item-nick { font-size: 12px; color: var(--gray); }
 
-        /* Кнопки сортировки ленты */
-        .sort-tabs {
+        .sort-dropdown-container {
+            position: relative;
+            margin: 10px 16px;
+            z-index: 100;
             display: flex;
-            gap: 10px;
-            padding: 0 16px 10px 16px;
-            z-index: 10;
-            background: var(--glass-bg);
-            backdrop-filter: blur(var(--glass-blur));
-            -webkit-backdrop-filter: blur(var(--glass-blur));
         }
-        .sort-btn {
-            flex: 1;
-            background: rgba(255,255,255,0.05);
+        .sort-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--input-bg);
             border: 1px solid var(--glass-border);
-            color: var(--gray);
-            padding: 8px;
-            border-radius: 12px;
+            color: var(--text);
+            padding: 8px 14px;
+            border-radius: 20px;
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             transition: 0.2s;
         }
-        .sort-btn.active {
+        .sort-dropdown-btn:active { transform: scale(0.95); }
+        .sort-dropdown-btn i.fa-chevron-down { transition: transform 0.3s; color: var(--gray); font-size: 11px; margin-left: 4px; }
+        .sort-dropdown-btn.open i.fa-chevron-down { transform: rotate(180deg); }
+        .sort-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            width: 180px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            animation: slideUp 0.2s ease;
+            padding: 6px;
+        }
+        .sort-dropdown-menu.show { display: flex; }
+        .sort-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: var(--text);
+            cursor: pointer;
+            border-radius: 12px;
+            transition: background 0.2s;
+        }
+        .sort-option:hover, .sort-option.active { background: rgba(255,255,255,0.1); }
+        .sort-option.active { color: var(--accent); font-weight: 700; }
+        .sort-option i { width: 16px; text-align: center; font-size: 12px; }
+
+        /* Тост для уведомлений вместо alert */
+        .toast {
+            position: fixed;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
             background: var(--accent);
             color: #000;
-            box-shadow: 0 2px 10px var(--accent-glow);
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 5px 20px var(--accent-glow);
+            opacity: 0;
+            transition: 0.3s;
+            z-index: 9999;
+            pointer-events: none;
+            text-align: center;
+            width: max-content;
+            max-width: 90%;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
     </style>
 </head>
@@ -444,10 +492,20 @@
                     </div>
                 </header>
                 
-                <!-- Кнопки сортировки -->
-                <div class="sort-tabs">
-                    <button class="sort-btn active" id="sort-new" onclick="app.setSort('new')"><i class="fas fa-clock"></i> Новые</button>
-                    <button class="sort-btn" id="sort-popular" onclick="app.setSort('popular')"><i class="fas fa-fire"></i> Популярные</button>
+                <div class="sort-dropdown-container">
+                    <button class="sort-dropdown-btn" id="sort-dropdown-btn" onclick="app.toggleSortDropdown(event)">
+                        <i class="fas fa-clock" id="sort-icon" style="color:var(--accent);"></i>
+                        <span id="sort-label">По новизне</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="sort-dropdown-menu" id="sort-dropdown-menu">
+                        <div class="sort-option active" id="sort-new" onclick="app.setSort('new')">
+                            <i class="fas fa-clock"></i> По новизне
+                        </div>
+                        <div class="sort-option" id="sort-popular" onclick="app.setSort('popular')">
+                            <i class="fas fa-fire"></i> По популярности
+                        </div>
+                    </div>
                 </div>
 
                 <div id="active-filter-container"></div>
@@ -580,6 +638,9 @@
             <i class="fas fa-user"></i><span>ПРОФИЛЬ</span>
         </button>
     </div>
+
+    <!-- Тост для уведомлений -->
+    <div id="toast" class="toast">Уведомление отправлено</div>
 
     <div id="theme-modal" class="modal">
         <div class="modal-box">
@@ -750,6 +811,14 @@
             }
         }
 
+        // Функция для красивого тоста вместо alert
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
         let swRegistration = null;
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -767,23 +836,49 @@
             subs: [],
             lastSendTime: 0,
             currentHashtagFilter: null,
-            currentSort: 'new', // 'new' или 'popular'
+            currentSort: 'new',
             unreadCounts: JSON.parse(localStorage.getItem('f_unread') || "{}"),
             originalTitle: document.title,
             blinkInterval: null,
             allUsersCache: {},
 
-            // --- НОВЫЙ БЛОК: ЖИВОЙ ПОИСК УПОМИНАНИЙ ---
             mentionContext: null,
             mentionInput: null,
             mentionStart: 0,
             mentionSelectedIndex: -1,
             mentionFilteredUsers: [],
 
+            toggleSortDropdown(event) {
+                event.stopPropagation();
+                const menu = document.getElementById('sort-dropdown-menu');
+                const btn = document.getElementById('sort-dropdown-btn');
+                if (menu.classList.contains('show')) {
+                    menu.classList.remove('show');
+                    btn.classList.remove('open');
+                } else {
+                    menu.classList.add('show');
+                    btn.classList.add('open');
+                }
+            },
+
             setSort(sortType) {
                 this.currentSort = sortType;
-                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('sort-dropdown-menu').classList.remove('show');
+                document.getElementById('sort-dropdown-btn').classList.remove('open');
+                
+                const icon = document.getElementById('sort-icon');
+                const label = document.getElementById('sort-label');
+                if (sortType === 'new') {
+                    icon.className = 'fas fa-clock';
+                    label.innerText = 'По новизне';
+                } else {
+                    icon.className = 'fas fa-fire';
+                    label.innerText = 'По популярности';
+                }
+
+                document.querySelectorAll('.sort-option').forEach(el => el.classList.remove('active'));
                 document.getElementById('sort-' + sortType).classList.add('active');
+
                 this.loadFeed();
             },
 
@@ -909,12 +1004,14 @@
 
             async testNotification() {
                 if (!('Notification' in window)) {
-                    return alert('Ваш браузер не поддерживает уведомления');
+                    return showToast('Браузер не поддерживает уведомления');
                 }
+                
+                // Запрашиваем разрешение (это обязательно должно быть по клику пользователя)
                 if (Notification.permission !== "granted") {
                     const permission = await Notification.requestPermission();
                     if (permission !== "granted") {
-                        return alert("Вы запретили уведомления в браузере! Разрешите их в настройках сайта (замок слева от адреса).");
+                        return showToast("Разрешите уведомления в настройках браузера!");
                     }
                 }
                 
@@ -934,9 +1031,10 @@
                     } else {
                          new Notification('Тест уведомления', { body: 'Работает напрямую', icon: 'icon-192.png' });
                     }
-                    alert("Тестовое уведомление отправлено! (Если оно не появилось, значит вкладка активна или Windows блокирует)");
+                    // Вместо alert используем тост, чтобы не блокировать показ уведомления
+                    showToast("Уведомление отправлено!");
                 } catch (e) {
-                    alert("Ошибка отправки: " + e.message);
+                    showToast("Ошибка: " + e.message);
                     try { new Notification('Тест уведомления', { body: 'Резервный вариант', icon: 'icon-192.png' }); } catch(err) {}
                 }
             },
@@ -949,14 +1047,9 @@
             setTheme(themeName, save = true) {
                 document.documentElement.setAttribute('data-theme', themeName);
                 if(save) localStorage.setItem('f_theme', themeName);
+                // Жестко ставим черный цвет для верхней панели
                 const metaColor = document.getElementById('meta-theme-color');
-                if(metaColor) {
-                    if(themeName === 'blue') metaColor.setAttribute('content', '#38bdf8');
-                    else if(themeName === 'pink') metaColor.setAttribute('content', '#ec4899');
-                    else if(themeName === 'purple') metaColor.setAttribute('content', '#a855f7');
-                    else if(themeName === 'newyear') metaColor.setAttribute('content', '#010a13');
-                    else metaColor.setAttribute('content', '#ff8c00');
-                }
+                if(metaColor) metaColor.setAttribute('content', '#050505');
                 
                 const themes = ['orange', 'blue', 'pink', 'purple', 'newyear'];
                 themes.forEach(t => {
@@ -1367,8 +1460,6 @@
                 const name = this.currentOpponentData.name;
                 this.toggleModal('user-profile-modal', false);
                 if (id && id !== this.myId) {
-                    this.chats[id] = { name: name, nick: this.currentOpponentData.nickname, avatar: this.currentOpponentData.avatar || '' };
-                    this.save();
                     this.openChat(id, name);
                 }
             },
@@ -1419,7 +1510,18 @@
                     await databases.createDocument(this.dbId, 'messages', 'unique()', {
                         sender_id: this.myId, receiver_id: this.currentOpponentId, text: t, timestamp: Date.now()
                     });
-                    if(this.chats[this.currentOpponentId]) { this.chats[this.currentOpponentId].last_text = t; this.save(); }
+                    
+                    if(this.chats[this.currentOpponentId]) { 
+                        this.chats[this.currentOpponentId].last_text = t; 
+                    } else {
+                        this.chats[this.currentOpponentId] = { 
+                            name: this.currentOpponentData.name, 
+                            nick: this.currentOpponentData.nickname, 
+                            avatar: this.currentOpponentData.avatar || '',
+                            last_text: t
+                        };
+                    }
+                    this.save(); 
                     i.value = ''; i.style.height = '50px';
                 } catch(e) { alert("Не удалось отправить: " + e.message); }
             },
@@ -1540,7 +1642,6 @@
                     const res = await databases.listDocuments(this.dbId, 'posts', [Appwrite.Query.limit(500)]);
                     container.innerHTML = '';
                     
-                    // Считаем комментарии для сортировки по популярности
                     let commentCounts = {};
                     if (this.currentSort === 'popular') {
                         try {
@@ -1562,20 +1663,19 @@
                         });
                     }
 
-                    // Сортировка
                     if (this.currentSort === 'new') {
                         filteredDocs.sort((a, b) => b.timestamp - a.timestamp);
                     } else if (this.currentSort === 'popular') {
                         filteredDocs.sort((a, b) => {
                             const likesA = (a.likes || []).length;
                             const likesB = (b.likes || []).length;
-                            if (likesB !== likesA) return likesB - likesA; // Сначала по лайкам
+                            if (likesB !== likesA) return likesB - likesA;
                             
                             const commsA = commentCounts[a.$id] || 0;
                             const commsB = commentCounts[b.$id] || 0;
-                            if (commsB !== commsA) return commsB - commsA; // Потом по комментам
+                            if (commsB !== commsA) return commsB - commsA;
 
-                            return b.timestamp - a.timestamp; // Если всё равно равно — по времени
+                            return b.timestamp - a.timestamp;
                         });
                     }
 
@@ -1715,12 +1815,10 @@
                 if (userId === this.myId) return alert("Это вы!");
                 try {
                     const uDoc = await databases.getDocument(this.dbId, 'users', userId);
-                    this.chats[userId] = { name: name, nick: nick, avatar: uDoc.avatar || '' };
+                    this.openChat(userId, name);
                 } catch(e) {
-                    this.chats[userId] = { name: name, nick: nick, avatar: '' };
+                    this.openChat(userId, name);
                 }
-                this.save();
-                this.openChat(userId, name);
             },
 
             async openComments(postId) {
@@ -1862,7 +1960,6 @@
                     const res = await databases.listDocuments(this.dbId, 'users', [Appwrite.Query.equal('nickname', t)]);
                     if(res.total > 0) {
                         const u = res.documents[0];
-                        this.chats[u.user_id] = { name: u.name, nick: u.nickname, avatar: u.avatar || '' };
                         this.save(); this.toggleModal('search-modal', false);
                         this.openChat(u.user_id, u.name); this.renderList();
                     } else alert("Пользователь не найден");
@@ -1944,6 +2041,12 @@
             if(!e.target.closest('.msg') && !e.target.closest('.post-card') && !e.target.closest('.comment-card')) app.closeMenu(); 
             if(!e.target.closest('.mention-suggestions') && !e.target.closest('textarea')) {
                 document.querySelectorAll('.mention-suggestions').forEach(el => el.style.display = 'none');
+            }
+            if (!e.target.closest('.sort-dropdown-container')) {
+                const menu = document.getElementById('sort-dropdown-menu');
+                const btn = document.getElementById('sort-dropdown-btn');
+                if (menu) menu.classList.remove('show');
+                if (btn) btn.classList.remove('open');
             }
         };
         
