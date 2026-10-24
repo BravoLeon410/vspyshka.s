@@ -428,12 +428,8 @@
 
             <div class="widget">
                 <h3>Популярные теги</h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    <span class="hashtag" onclick="app.filterByHashtag('вспышка')">#вспышка</span>
-                    <span class="hashtag" onclick="app.filterByHashtag('мемы')">#мемы</span>
-                    <span class="hashtag" onclick="app.filterByHashtag('код')">#код</span>
-                    <span class="hashtag" onclick="app.filterByHashtag('жизнь')">#жизнь</span>
-                    <span class="hashtag" onclick="app.filterByHashtag('новости')">#новости</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="popular-tags">
+                    <span style="color:var(--gray); font-size:13px;">Загрузка...</span>
                 </div>
             </div>
 
@@ -517,7 +513,12 @@
     <div id="post-modal" class="modal">
         <div class="modal-box">
             <h3>Новая вспышка</h3>
-            <textarea id="post-input" placeholder="Что у вас нового?..." autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" style="height: 140px;"></textarea>
+            <textarea id="post-input" placeholder="Что у вас нового?..." autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" style="height: 120px;"></textarea>
+            
+            <div style="color: var(--accent); font-size: 12px; text-transform: uppercase; margin: 15px 0 8px 5px; font-weight: 800; letter-spacing: 1px; text-align: left;">Теги (через запятую или пробел)</div>
+            <input type="text" id="post-tags-input" placeholder="#мемы, #жизнь, #код" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <div id="post-tags-preview" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 10px;"></div>
+            
             <button class="btn" onclick="app.createPost()" style="width:100%; margin-top:20px; padding: 16px;">ОПУБЛИКОВАТЬ</button>
             <button class="btn" onclick="app.toggleModal('post-modal', false)" style="width:100%; margin-top:10px; background:var(--input-bg); color:var(--text); border:1px solid var(--glass-border); padding: 16px;">ОТМЕНА</button>
         </div>
@@ -565,7 +566,20 @@
         }
 
         function parseHashtags(text) {
-            return text.replace(/#([a-zA-Z0-9_а-яА-ЯёЁ]+)/g, '<span class="hashtag" onclick="app.filterByHashtag(\'$1\')">#$1</span>');
+            return text.replace(/(^|[\s(])#([a-zA-Z0-9_а-яА-ЯёЁ]{2,30})/g, 
+                (match, prefix, tag) => `${prefix}<span class="hashtag" onclick="app.filterByHashtag('${tag.toLowerCase()}')">#${tag}</span>`
+            );
+        }
+
+        function extractTags(text) {
+            const tags = [];
+            const re = /(^|[\s(])#([a-zA-Z0-9_а-яА-ЯёЁ]{2,30})/g;
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                const tag = m[2].toLowerCase();
+                if (!tags.includes(tag)) tags.push(tag);
+            }
+            return tags;
         }
 
         function resetViewportHeight() {
@@ -828,13 +842,13 @@
                     }
                     history.replaceState({ screen: 'chats' }, "", "#chats");
                     this.showScreen('chats'); this.initRealtimeGlobal();
+                    this.renderPopularTags();
                 } catch(e) { alert("Ошибка входа. Проверьте коллекции в Appwrite."); }
             },
 
             initRealtimeGlobal() {
                 client.subscribe(`databases.${this.dbId}.collections.messages.documents`, async res => {
                     const m = res.payload;
-                    // ИСПРАВЛЕНО: используем receiver_id
                     if (m.receiver_id === this.myId) {
                         if (!this.chats[m.sender_id]) {
                             try {
@@ -850,7 +864,6 @@
 
                         this.save(); this.renderList();
 
-                        // ИСПРАВЛЕНО: Уведомления с пробуждением SW
                         if(this.currentOpponentId !== m.sender_id) {
                             const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
                             
@@ -1083,7 +1096,7 @@
                     reactionsHtml = `<div class="msg-reactions">${reactions.map(r => `<div class="reaction-badge">${r}</div>`).join('')}</div>`;
                 }
 
-                d.innerHTML = `<span>${escapeHTML(msgText)}</span>${reactionsHtml}<span class="msg-time">${this.formatTime(m.timestamp)}</span>`;
+                d.innerHTML = `<span>${parseHashtags(escapeHTML(msgText))}</span>${reactionsHtml}<span class="msg-time">${this.formatTime(m.timestamp)}</span>`;
                 
                 let timer;
                 const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'msg', m), 600); };
@@ -1133,7 +1146,7 @@
                     if (el) {
                         let msgText = text.replace(/\n\n\|\|.*/, '');
                         let reactionsHtml = `<div class="msg-reactions"><div class="reaction-badge">${emoji}</div></div>`;
-                        el.innerHTML = `<span>${escapeHTML(msgText)}</span>${reactionsHtml}<span class="msg-time">${this.formatTime(item.timestamp)}</span>`;
+                        el.innerHTML = `<span>${parseHashtags(escapeHTML(msgText))}</span>${reactionsHtml}<span class="msg-time">${this.formatTime(item.timestamp)}</span>`;
                     }
                 } catch(e) { alert("Ошибка реакции: " + e.message); }
             },
@@ -1147,26 +1160,70 @@
                 this.loadFeed();
             },
 
+            async registerHashtags(tags) {
+                if (!tags.length) return;
+                for (const tag of tags) {
+                    try {
+                        const existing = await databases.listDocuments(this.dbId, 'hashtags', [Appwrite.Query.equal('name', tag)]);
+                        if (existing.total === 0) {
+                            await databases.createDocument(this.dbId, 'hashtags', 'unique()', { name: tag, created_at: Date.now() });
+                        }
+                    } catch(e) { console.warn('hashtag register:', e.message); }
+                }
+            },
+
+            async renderPopularTags() {
+                const box = document.getElementById('popular-tags');
+                if (!box) return;
+                try {
+                    const res = await databases.listDocuments(this.dbId, 'posts', [Appwrite.Query.limit(500)]);
+                    const counts = {};
+                    for (const p of res.documents) {
+                        const tags = extractTags(p.text || '');
+                        for (const tag of tags) counts[tag] = (counts[tag] || 0) + 1;
+                    }
+                    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                    if (sorted.length === 0) {
+                        box.innerHTML = '<span style="color:var(--gray); font-size:13px;">Пока нет тегов</span>';
+                        return;
+                    }
+                    box.innerHTML = sorted.map(([tag, count]) => 
+                        `<span class="hashtag" onclick="app.filterByHashtag('${tag}')" style="display:inline-flex; align-items:center; gap:4px;">#${escapeHTML(tag)} <span style="color:var(--gray); font-size:11px; font-weight:600;">${count}</span></span>`
+                    ).join('');
+                } catch(e) {
+                    box.innerHTML = '<span style="color:var(--gray); font-size:13px;">Ошибка загрузки</span>';
+                }
+            },
+
             async createPost() {
                 const i = document.getElementById('post-input'), t = i.value.trim();
                 if(!t) return;
+                
+                const tagsRaw = document.getElementById('post-tags-input').value.trim();
+                const tagsFromInput = tagsRaw.split(/[\s,]+/).map(x => x.replace(/^#/, '').toLowerCase().trim()).filter(x => x.length >= 2 && x.length <= 30);
+                const tagsFromText = extractTags(t);
+                const allTags = [...new Set([...tagsFromInput, ...tagsFromText])];
+                
                 try {
                     await databases.createDocument(this.dbId, 'posts', 'unique()', {
                         user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now(), likes: []
                     });
-                    i.value = ''; this.toggleModal('post-modal', false); this.loadFeed();
+                    
+                    await this.registerHashtags(allTags);
+                    
+                    i.value = ''; 
+                    document.getElementById('post-tags-input').value = '';
+                    document.getElementById('post-tags-preview').innerHTML = '';
+                    this.toggleModal('post-modal', false); 
+                    this.loadFeed();
+                    this.renderPopularTags();
                 } catch(e) { alert("Ошибка публикации: " + e.message); }
             },
+
             async loadFeed() {
                 const container = document.getElementById('feed-container'); 
                 const filterContainer = document.getElementById('active-filter-container');
                 
-                if (this.currentHashtagFilter) {
-                    filterContainer.innerHTML = `<div class="feed-filter-badge" onclick="app.clearHashtagFilter()">#${this.currentHashtagFilter} <i class="fas fa-times"></i></div>`;
-                } else {
-                    filterContainer.innerHTML = '';
-                }
-
                 document.querySelector('.fab-btn').style.display = 'flex';
                 container.innerHTML = `<div class="skeleton"><div class="sk-line short"></div><div class="sk-line"></div><div class="sk-line medium"></div></div>`;
 
@@ -1176,7 +1233,11 @@
                     
                     let filteredDocs = res.documents;
                     if (this.currentHashtagFilter) {
-                        filteredDocs = res.documents.filter(p => p.text.toLowerCase().includes(`#${this.currentHashtagFilter.toLowerCase()}`));
+                        const re = new RegExp(`(^|[\\s(])#${this.currentHashtagFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\wа-яА-ЯёЁ])`, 'i');
+                        filteredDocs = res.documents.filter(p => re.test(p.text));
+                        filterContainer.innerHTML = `<div class="feed-filter-badge" onclick="app.clearHashtagFilter()">#${escapeHTML(this.currentHashtagFilter)} · ${filteredDocs.length} <i class="fas fa-times"></i></div>`;
+                    } else {
+                        filterContainer.innerHTML = '';
                     }
 
                     if(filteredDocs.length === 0) {
@@ -1325,7 +1386,7 @@
                         <b>${escapeHTML(c.author_name)} (@${escapeHTML(c.author_nickname)})</b>
                         <span>${this.formatTime(c.timestamp)}</span>
                     </div>
-                    <div style="font-size:15px; line-height:1.5; white-space:pre-wrap;">${escapeHTML(c.text)}</div>
+                    <div style="font-size:15px; line-height:1.5; white-space:pre-wrap;">${parseHashtags(escapeHTML(c.text))}</div>
                 `;
                 let timer;
                 const startPress = (e) => { if (e.type === 'touchstart') timer = setTimeout(() => this.showMenu(e, 'comment', c), 600); };
@@ -1405,7 +1466,7 @@
                     const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
                     try {
                         await databases.deleteDocument(this.dbId, coll, item.$id);
-                        if(type === 'post') this.loadFeed();
+                        if(type === 'post') { this.loadFeed(); this.renderPopularTags(); }
                         if(type === 'comment') this.openComments(this.activePostId);
                         if(type === 'msg') document.querySelector(`[data-id="${item.$id}"]`)?.remove();
                     } catch(e) { alert("Ошибка удаления: " + e.message); }
@@ -1420,7 +1481,7 @@
                 const coll = type === 'msg' ? 'messages' : (type === 'post' ? 'posts' : 'comments');
                 try {
                     await databases.updateDocument(this.dbId, coll, item.$id, { text: newText.trim() });
-                    if(type === 'post') this.loadFeed();
+                    if(type === 'post') { this.loadFeed(); this.renderPopularTags(); }
                     if(type === 'comment') this.openComments(this.activePostId);
                     if(type === 'msg') {
                         const el = document.querySelector(`[data-id="${item.$id}"] span`);
@@ -1463,6 +1524,16 @@
             if (e.target.tagName.toLowerCase() === 'textarea' && e.target.classList.contains('msg-textarea')) {
                 e.target.style.height = '50px';
                 e.target.style.height = (e.target.scrollHeight) + 'px';
+            }
+            if (e.target.id === 'post-tags-input' || e.target.id === 'post-input') {
+                const raw = document.getElementById('post-tags-input').value.trim();
+                const fromInput = raw.split(/[\s,]+/).map(x => x.replace(/^#/, '').toLowerCase().trim()).filter(x => x.length >= 2 && x.length <= 30);
+                const fromText = extractTags(document.getElementById('post-input').value);
+                const all = [...new Set([...fromInput, ...fromText])];
+                const preview = document.getElementById('post-tags-preview');
+                if (preview) {
+                    preview.innerHTML = all.map(t => `<span class="hashtag" style="font-size:13px; background:var(--input-bg); padding:4px 10px; border-radius:12px; border:1px solid var(--glass-border);">#${escapeHTML(t)}</span>`).join('');
+                }
             }
         });
 
