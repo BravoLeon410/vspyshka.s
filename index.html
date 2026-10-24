@@ -1168,7 +1168,7 @@
                         if (existing.total === 0) {
                             await databases.createDocument(this.dbId, 'hashtags', 'unique()', { name: tag, created_at: Date.now() });
                         }
-                    } catch(e) { console.warn('hashtag register:', e.message); }
+                    } catch(e) { /* тихо игнорим если нет коллекции */ }
                 }
             },
 
@@ -1179,7 +1179,9 @@
                     const res = await databases.listDocuments(this.dbId, 'posts', [Appwrite.Query.limit(500)]);
                     const counts = {};
                     for (const p of res.documents) {
-                        const tags = extractTags(p.text || '');
+                        let tags = [];
+                        try { if (p.tags) tags = JSON.parse(p.tags); } catch(e) {}
+                        if (!tags || tags.length === 0) tags = extractTags(p.text || '');
                         for (const tag of tags) counts[tag] = (counts[tag] || 0) + 1;
                     }
                     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -1206,7 +1208,13 @@
                 
                 try {
                     await databases.createDocument(this.dbId, 'posts', 'unique()', {
-                        user_id: this.myId, author_name: this.me.name, author_nickname: this.me.nickname, text: t, timestamp: Date.now(), likes: []
+                        user_id: this.myId, 
+                        author_name: this.me.name, 
+                        author_nickname: this.me.nickname, 
+                        text: t, 
+                        tags: JSON.stringify(allTags),
+                        timestamp: Date.now(), 
+                        likes: []
                     });
                     
                     await this.registerHashtags(allTags);
@@ -1233,8 +1241,12 @@
                     
                     let filteredDocs = res.documents;
                     if (this.currentHashtagFilter) {
-                        const re = new RegExp(`(^|[\\s(])#${this.currentHashtagFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\wа-яА-ЯёЁ])`, 'i');
-                        filteredDocs = res.documents.filter(p => re.test(p.text));
+                        filteredDocs = res.documents.filter(p => {
+                            let tags = [];
+                            try { if (p.tags) tags = JSON.parse(p.tags); } catch(e) {}
+                            if (!tags || tags.length === 0) tags = extractTags(p.text || '');
+                            return tags.includes(this.currentHashtagFilter.toLowerCase());
+                        });
                         filterContainer.innerHTML = `<div class="feed-filter-badge" onclick="app.clearHashtagFilter()">#${escapeHTML(this.currentHashtagFilter)} · ${filteredDocs.length} <i class="fas fa-times"></i></div>`;
                     } else {
                         filterContainer.innerHTML = '';
@@ -1266,6 +1278,18 @@
                             ? `<div class="avatar" style="width:36px; height:36px; font-size:14px;"><img src="${authorAvatar}" alt=""></div>` 
                             : `<div class="avatar" style="width:36px; height:36px; font-size:14px;">${p.author_name ? p.author_name[0].toUpperCase() : '?'}</div>`;
 
+                        let postTags = [];
+                        try { if (p.tags) postTags = JSON.parse(p.tags); } catch(e) {}
+                        if (!postTags || postTags.length === 0) postTags = extractTags(p.text || '');
+
+                        const tagsHtml = postTags.length > 0 
+                            ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;">
+                                ${postTags.map(tag => 
+                                    `<span class="hashtag" onclick="app.filterByHashtag('${tag}')" style="font-size:12px; background:var(--input-bg); padding:4px 10px; border-radius:12px; border:1px solid var(--glass-border); font-weight:600;">#${escapeHTML(tag)}</span>`
+                                ).join('')}
+                               </div>`
+                            : '';
+
                         const card = document.createElement('div');
                         card.className = `post-card ${isPostFromAdmin ? 'admin-post' : ''}`;
                         card.innerHTML = `
@@ -1280,7 +1304,8 @@
                                 </div>
                                 <div style="color:var(--gray); font-size:12px; font-weight: 500;">${this.formatTime(p.timestamp)}</div>
                             </div>
-                            <div style="font-size:16px; margin-bottom:16px; white-space:pre-wrap; line-height:1.5;">${parseHashtags(escapeHTML(p.text))}</div>
+                            <div style="font-size:16px; margin-bottom:${postTags.length > 0 ? '10px' : '16px'}; white-space:pre-wrap; line-height:1.5;">${parseHashtags(escapeHTML(p.text))}</div>
+                            ${tagsHtml}
                             <div style="display:flex; gap:12px; flex-wrap: wrap;">
                                 <button class="btn like-btn" style="background:var(--input-bg); border: 1px solid var(--glass-border); color:${likeColor}; font-size:13px; padding:10px 18px; border-radius:20px; backdrop-filter: blur(5px);" onclick="app.toggleLike('${p.$id}', event)">
                                     <i class="${isLikedByMe ? 'fas' : 'far'} fa-heart"></i> ${likesArr.length}
