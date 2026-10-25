@@ -6,7 +6,7 @@
     <title>ВСПЫШКА</title>
     
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#050505" id="meta-theme-color">
+    <meta name="theme-color" content="#000000" id="meta-theme-color">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ВСПЫШКА">
@@ -15,8 +15,8 @@
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.0"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        html, body { background-color: #050505; overscroll-behavior: none; }
-        body { background-color: var(--bg); padding-bottom: env(safe-area-inset-bottom); }
+        html { background-color: #000000 !important; }
+        body { background-color: var(--bg); margin: 0; padding: 0; }
 
         :root, [data-theme="orange"] { 
             --bg: #050505; --accent: #ff8c00; --text: #ffffff; --gray: #a1a1aa; --red: #ff4444;
@@ -59,9 +59,10 @@
             --mention-color: #000000; --mention-bg: #00e5ff;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; outline: none !important; }
+        *:focus, *:active { outline: none !important; box-shadow: none; }
         
-        body, button, header, .chat-item, .post-card, .avatar, .msg, .comment-card, .admin-user-card { 
+        body, button, header, .chat-item, .post-card, .avatar, .msg, .comment-card, .admin-user-card, .appeal-card { 
             -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
         }
         
@@ -129,7 +130,7 @@
             .widget-profile-nick { color: var(--gray); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
         }
 
-        header { padding: 0 20px; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; height: 70px; min-height: 70px; flex-shrink: 0; position: relative; z-index: 10; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); }
+        header { padding: 0 20px; background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; height: 70px; min-height: 70px; flex-shrink: 0; position: relative; z-index: 10; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); border-radius: 0; }
         .header-title { display: flex; flex-direction: column; }
         .header-title b { color: var(--accent); font-size: 24px; letter-spacing: 1px; text-shadow: 0 2px 10px var(--accent-glow); }
         .header-slogan { font-size: 11px; color: var(--gray); font-weight: 500; margin-top: -2px; letter-spacing: 0.5px; }
@@ -151,8 +152,8 @@
         .nav-btn i { font-size: 22px; margin-bottom: 2px; transition: 0.3s; }
         .nav-btn span { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
         
-        #chat-list, #feed-container, #comments-list, #admin-users-list { flex: 1; overflow-y: auto; padding: 15px 0; z-index: 1; }
-        .chat-item, .post-card, .comment-card, .admin-user-card { padding: 18px; background: var(--card-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); margin: 12px 16px; border-radius: 24px; position: relative; border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); transition: transform 0.2s, box-shadow 0.2s; }
+        #chat-list, #feed-container, #comments-list, #admin-tab-content, #appeals-list, #banned-users-list { flex: 1; overflow-y: auto; padding: 15px 0; z-index: 1; }
+        .chat-item, .post-card, .comment-card, .admin-user-card, .appeal-card { padding: 18px; background: var(--card-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); margin: 12px 16px; border-radius: 24px; position: relative; border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); transition: transform 0.2s, box-shadow 0.2s; }
         .chat-item:active, .post-card:active { transform: scale(0.98); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         
         .post-card.admin-post { border: 1px solid var(--accent); box-shadow: 0 0 20px var(--accent-glow), var(--glass-shadow); background: linear-gradient(135deg, rgba(255,140,0,0.1), var(--card-bg)); }
@@ -200,9 +201,6 @@
         @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal-box h3 { margin-bottom: 25px; color: var(--accent); font-size: 22px; text-shadow: 0 0 10px var(--accent-glow); }
         
-        .doc-text { text-align: left; font-size: 14px; line-height: 1.6; color: var(--gray); margin-bottom: 20px; }
-        .doc-text h4 { color: var(--text); margin: 15px 0 5px 0; font-size: 16px; }
-
         .context-menu { position: fixed; background: var(--card-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border-radius: 20px; padding: 8px; display: none; flex-direction: column; z-index: 3000; border: 1px solid var(--glass-border); width: 200px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
         .context-item { padding: 14px 16px; color: var(--text); font-size: 15px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 12px; border-radius: 12px; transition: background 0.2s; }
         .context-item:active { background: rgba(255,255,255,0.1); }
@@ -277,6 +275,11 @@
         .reg-checkbox-container input { margin-top: 3px; cursor: pointer; accent-color: var(--accent); width: 16px; height: 16px; }
         .reg-checkbox-container a { color: var(--accent); text-decoration: none; font-weight: 600; }
         .reg-checkbox-container a:active { opacity: 0.7; }
+
+        /* Стили для админ-табов */
+        .admin-tabs { display: flex; background: var(--input-bg); border-radius: 16px; margin: 10px 16px; padding: 4px; }
+        .admin-tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--gray); cursor: pointer; transition: 0.2s; }
+        .admin-tab-btn.active { background: var(--accent); color: #000; box-shadow: 0 2px 10px var(--accent-glow); }
     </style>
 </head>
 <body>
@@ -341,6 +344,24 @@
 
                     <button class="btn" id="reg-btn" onclick="app.auth('reg')" disabled style="width:100%; margin-top:25px; font-size: 17px; padding: 16px;">РЕГИСТРАЦИЯ</button>
                     <button onclick="app.toggleAuth(false)" style="background:none; border:none; color:var(--gray); margin-top:25px; font-size:15px; font-weight: 500;">Уже есть аккаунт? <span style="color:var(--accent); font-weight: 700;">Войти</span></button>
+                </div>
+            </div>
+
+            <!-- ЭКРАН БАНА -->
+            <div id="banned-screen" class="screen" style="justify-content:center; align-items:center; z-index: 50; background: var(--bg);">
+                <div style="text-align: center; padding: 30px; max-width: 400px;">
+                    <div style="font-size: 80px; margin-bottom: 20px;">😢</div>
+                    <h2 style="color: var(--red); margin-bottom: 10px;">Аккаунт заблокирован</h2>
+                    <p style="color: var(--gray); margin-bottom: 20px;">Вы нарушили правила сообщества.</p>
+                    
+                    <div style="background: var(--card-bg); padding: 15px; border-radius: 16px; border: 1px solid var(--red); margin-bottom: 30px;">
+                        <b style="color: var(--text); display: block; margin-bottom: 5px;">Причина:</b>
+                        <span id="ban-reason-text" style="color: var(--red); font-size: 15px;">Не указана</span>
+                    </div>
+
+                    <textarea id="appeal-reason" placeholder="Опишите, почему вас стоит разбанить..." style="margin-bottom: 15px; height: 100px;"></textarea>
+                    <button class="btn" id="appeal-btn" onclick="app.submitAppeal()" style="width: 100%; padding: 16px;">Подать апелляцию</button>
+                    <button class="btn" onclick="app.logout()" style="width: 100%; margin-top: 10px; background: var(--input-bg); color: var(--text); border: 1px solid var(--glass-border); padding: 16px;">Выйти</button>
                 </div>
             </div>
 
@@ -432,10 +453,21 @@
                 <header>
                     <div class="header-title">
                         <b style="color: #ff4444;">АДМИН-ПАНЕЛЬ</b>
-                        <span class="header-slogan">Управление пользователями</span>
+                        <span class="header-slogan">Управление</span>
                     </div>
                 </header>
-                <div id="admin-users-list"></div>
+                
+                <div class="admin-tabs">
+                    <div class="admin-tab-btn active" id="tab-users" onclick="app.switchAdminTab('users')">Пользователи</div>
+                    <div class="admin-tab-btn" id="tab-appeals" onclick="app.switchAdminTab('appeals')">Апелляции <span id="appeals-count"></span></div>
+                    <div class="admin-tab-btn" id="tab-banned" onclick="app.switchAdminTab('banned')">Забаненные</div>
+                </div>
+
+                <div id="admin-tab-content">
+                    <div id="admin-users-list"></div>
+                    <div id="appeals-list" style="display: none;"></div>
+                    <div id="banned-users-list" style="display: none;"></div>
+                </div>
             </div>
 
             <div id="chat-window" class="screen">
@@ -713,12 +745,39 @@
             blinkInterval: null,
             allUsersCache: {},
             mentionContext: null, mentionInput: null, mentionStart: 0, mentionSelectedIndex: -1, mentionFilteredUsers: [],
+            currentAdminTab: 'users',
+
+            renderStatusBadge(nickname, role, custom_status, status_color, isBanned) {
+                if (isBanned) return `<span class="custom-status" style="background: var(--red); color: #fff;"><i class="fas fa-ban"></i> Забанен</span>`;
+                let html = '';
+                if (custom_status) {
+                    const color = status_color || 'var(--accent)';
+                    html += `<span class="custom-status" style="background: ${color};">${escapeHTML(custom_status)}</span>`;
+                } else if (nickname === 'hyisa' || role === 'admin') {
+                    html += `<span class="admin-badge"><i class="fas fa-shield-alt"></i> Админ</span>`;
+                }
+                return html;
+            },
 
             checkRegDocs() {
                 const terms = document.getElementById('check-terms').checked;
                 const privacy = document.getElementById('check-privacy').checked;
                 const btn = document.getElementById('reg-btn');
                 btn.disabled = !(terms && privacy);
+            },
+
+            switchAdminTab(tab) {
+                this.currentAdminTab = tab;
+                document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(`tab-${tab}`).classList.add('active');
+                
+                document.getElementById('admin-users-list').style.display = tab === 'users' ? 'block' : 'none';
+                document.getElementById('appeals-list').style.display = tab === 'appeals' ? 'block' : 'none';
+                document.getElementById('banned-users-list').style.display = tab === 'banned' ? 'block' : 'none';
+
+                if (tab === 'users') this.loadAdminUsers();
+                if (tab === 'appeals') this.loadAppeals();
+                if (tab === 'banned') this.loadBannedUsers();
             },
 
             async loadAdminUsers() {
@@ -730,13 +789,15 @@
                     
                     res.documents.forEach(u => {
                         const card = document.createElement('div'); card.className = 'admin-user-card';
-                        const statusColor = u.status_color || 'var(--accent)';
                         
                         card.innerHTML = `
                             <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
                                 <div class="avatar">${u.avatar ? `<img src="${u.avatar}">` : u.name[0].toUpperCase()}</div>
                                 <div>
-                                    <b style="font-size:16px;">${escapeHTML(u.name)}</b>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <b style="font-size:16px;">${escapeHTML(u.name)}</b>
+                                        ${u.is_banned ? '<span style="color:var(--red); font-size:12px;"><i class="fas fa-ban"></i> В бане</span>' : ''}
+                                    </div>
                                     <div style="color:var(--gray); font-size:13px;">@${escapeHTML(u.nickname)}</div>
                                 </div>
                             </div>
@@ -750,7 +811,14 @@
                                 <input type="text" id="status-${u.$id}" value="${u.custom_status ? escapeHTML(u.custom_status) : ''}" placeholder="Свой статус..." style="flex:1; padding: 8px 12px; border-radius:12px; font-size:13px;">
                                 <input type="color" id="color-${u.$id}" value="${u.status_color || '#ff8c00'}" style="width: 40px; height: 40px; padding: 0; border: none; border-radius: 8px; cursor: pointer; background: transparent;">
                             </div>
-                            <button class="btn" style="width:100%; padding:10px; border-radius:12px; font-size:14px;" onclick="app.saveUserRole('${u.$id}')">Сохранить права</button>
+                            
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn" style="flex:1; padding:10px; border-radius:12px; font-size:14px;" onclick="app.saveUserRole('${u.$id}')">Сохранить</button>
+                                ${u.is_banned 
+                                    ? `<button class="btn" style="flex:1; padding:10px; border-radius:12px; font-size:14px; background:var(--glass-border); color:var(--text);" onclick="app.unbanUser('${u.$id}')">Разбанить</button>`
+                                    : `<button class="btn" style="flex:1; padding:10px; border-radius:12px; font-size:14px; background:var(--red); color:#fff;" onclick="app.banUser('${u.$id}')">Забанить</button>`
+                                }
+                            </div>
                         `;
                         list.appendChild(card);
                     });
@@ -768,8 +836,141 @@
                         custom_status: status,
                         status_color: color
                     });
-                    showToast('Права успешно обновлены!');
-                } catch(e) { alert('Ошибка сохранения: ' + e.message); }
+                    showToast('Права обновлены!');
+                } catch(e) { alert('Ошибка: ' + e.message); }
+            },
+
+            async banUser(uid) {
+                const reason = prompt("Укажите причину бана:");
+                if (reason === null) return; // Отмена
+                try {
+                    await databases.updateDocument(this.dbId, 'users', uid, {
+                        is_banned: true,
+                        ban_reason: reason || 'Нарушение правил сообщества'
+                    });
+                    showToast('Пользователь забанен');
+                    this.loadAdminUsers();
+                } catch(e) { alert('Ошибка: ' + e.message); }
+            },
+
+            async unbanUser(uid) {
+                try {
+                    await databases.updateDocument(this.dbId, 'users', uid, {
+                        is_banned: false,
+                        ban_reason: ''
+                    });
+                    showToast('Пользователь разбанен');
+                    this.loadAdminUsers();
+                } catch(e) { alert('Ошибка: ' + e.message); }
+            },
+
+            async loadAppeals() {
+                const list = document.getElementById('appeals-list');
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gray);">Загрузка...</div>';
+                try {
+                    const res = await databases.listDocuments(this.dbId, 'appeals', [
+                        Appwrite.Query.equal('status', 'pending'),
+                        Appwrite.Query.orderDesc('timestamp')
+                    ]);
+                    
+                    document.getElementById('appeals-count').innerText = res.total > 0 ? `(${res.total})` : '';
+                    
+                    if (res.total === 0) {
+                        list.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><div>Нет активных апелляций</div></div>';
+                        return;
+                    }
+
+                    list.innerHTML = '';
+                    res.documents.forEach(a => {
+                        const card = document.createElement('div'); card.className = 'appeal-card';
+                        card.innerHTML = `
+                            <div style="margin-bottom:10px;">
+                                <b>Пользователь:</b> @${escapeHTML(a.username)} <br>
+                                <span style="font-size:12px; color:var(--gray);">${new Date(a.timestamp).toLocaleString()}</span>
+                            </div>
+                            <div style="background:var(--input-bg); padding:10px; border-radius:12px; margin-bottom:15px; font-size:14px;">
+                                "${escapeHTML(a.reason)}"
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn" style="flex:1; background:var(--accent); color:#000;" onclick="app.resolveAppeal('${a.$id}', '${a.user_id}', 'approved')">Разбанить</button>
+                                <button class="btn" style="flex:1; background:var(--red); color:#fff;" onclick="app.resolveAppeal('${a.$id}', '${a.user_id}', 'rejected')">Отклонить</button>
+                            </div>
+                        `;
+                        list.appendChild(card);
+                    });
+                } catch(e) { list.innerHTML = 'Ошибка загрузки апелляций'; }
+            },
+
+            async resolveAppeal(appealId, userId, status) {
+                try {
+                    await databases.updateDocument(this.dbId, 'appeals', appealId, { status: status });
+                    if (status === 'approved') {
+                        await databases.updateDocument(this.dbId, 'users', userId, { is_banned: false, ban_reason: '' });
+                        showToast('Пользователь разбанен');
+                    } else {
+                        showToast('Апелляция отклонена');
+                    }
+                    this.loadAppeals();
+                } catch(e) { alert('Ошибка: ' + e.message); }
+            },
+
+            async loadBannedUsers() {
+                const list = document.getElementById('banned-users-list');
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gray);">Загрузка...</div>';
+                try {
+                    const res = await databases.listDocuments(this.dbId, 'users', [
+                        Appwrite.Query.equal('is_banned', true),
+                        Appwrite.Query.limit(100)
+                    ]);
+                    
+                    if (res.total === 0) {
+                        list.innerHTML = '<div class="empty-state"><i class="fas fa-smile"></i><div>Забаненных нет</div></div>';
+                        return;
+                    }
+
+                    list.innerHTML = '';
+                    res.documents.forEach(u => {
+                        const card = document.createElement('div'); card.className = 'admin-user-card';
+                        card.innerHTML = `
+                            <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
+                                <div class="avatar">${u.avatar ? `<img src="${u.avatar}">` : u.name[0].toUpperCase()}</div>
+                                <div>
+                                    <b style="font-size:16px; color: var(--text);">${escapeHTML(u.name)}</b>
+                                    <div style="color:var(--gray); font-size:13px;">@${escapeHTML(u.nickname)}</div>
+                                </div>
+                            </div>
+                            <div style="font-size:13px; margin-bottom:15px; color:var(--red);">
+                                <b>Причина:</b> ${escapeHTML(u.ban_reason || 'Не указана')}
+                            </div>
+                            <button class="btn" style="width:100%; background:var(--accent); color:#000;" onclick="app.unbanUser('${u.$id}')">Разбанить</button>
+                        `;
+                        list.appendChild(card);
+                    });
+                } catch(e) { list.innerHTML = 'Ошибка загрузки'; }
+            },
+
+            async submitAppeal() {
+                const reasonInput = document.getElementById('appeal-reason');
+                const reason = reasonInput.value.trim();
+                if (!reason) return showToast("Напишите причину!");
+
+                const btn = document.getElementById('appeal-btn');
+                btn.disabled = true; btn.innerText = "Отправка...";
+
+                try {
+                    await databases.createDocument(this.dbId, 'appeals', 'unique()', {
+                        user_id: this.myId,
+                        username: this.me.nickname,
+                        reason: reason,
+                        status: 'pending',
+                        timestamp: Date.now()
+                    });
+                    showToast("Апелляция отправлена админам!");
+                    reasonInput.value = '';
+                } catch(e) {
+                    alert("Ошибка: " + e.message);
+                }
+                btn.disabled = false; btn.innerText = "Подать апелляцию";
             },
 
             toggleSortDropdown(event) {
@@ -959,7 +1160,7 @@
                 document.documentElement.setAttribute('data-theme', themeName);
                 if(save) localStorage.setItem('f_theme', themeName);
                 const metaColor = document.getElementById('meta-theme-color');
-                if(metaColor) metaColor.setAttribute('content', '#050505');
+                if(metaColor) metaColor.setAttribute('content', '#000000');
                 
                 const themes = ['orange', 'blue', 'pink', 'purple', 'newyear'];
                 themes.forEach(t => {
@@ -1008,7 +1209,7 @@
                     document.getElementById('admin-screen').classList.add('active');
                     document.getElementById('btn-admin').classList.add('active');
                     document.getElementById('desk-btn-admin').classList.add('active');
-                    this.loadAdminUsers();
+                    this.switchAdminTab('users');
                 } else if(name === 'settings') {
                     document.getElementById('settings-screen').classList.add('active');
                     document.getElementById('btn-settings').classList.add('active');
@@ -1125,7 +1326,7 @@
 
                         const res = await account.create('unique()', email, pass, name);
                         await account.createEmailPasswordSession(email, pass);
-                        await databases.createDocument(this.dbId, 'users', res.$id, { user_id: res.$id, name: name, nickname: nick, avatar: '' });
+                        await databases.createDocument(this.dbId, 'users', res.$id, { user_id: res.$id, name: name, nickname: nick, avatar: '', is_banned: false });
                     } else {
                         await account.createEmailPasswordSession(document.getElementById('log-email').value, document.getElementById('log-pass').value);
                     }
@@ -1140,6 +1341,15 @@
                 this.myId = user.$id; this.rawEmail = user.email;
                 try {
                     this.me = await databases.getDocument(this.dbId, 'users', this.myId);
+                    
+                    if (this.me.is_banned) {
+                        document.getElementById('auth-screen').style.display = 'none';
+                        document.getElementById('banned-screen').classList.add('active');
+                        document.getElementById('ban-reason-text').innerText = this.me.ban_reason || 'Нарушение правил сообщества';
+                        document.getElementById('bottom-nav').classList.remove('visible');
+                        return;
+                    }
+
                     document.getElementById('auth-screen').style.display = 'none';
                     
                     this.updateProfileUI();
@@ -1235,7 +1445,7 @@
                     try {
                         const uDoc = await databases.getDocument(this.dbId, 'users', oppId);
                         if (uDoc && uDoc.name) {
-                            this.chats[oppId] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '' };
+                            this.chats[oppId] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '', role: uDoc.role, custom_status: uDoc.custom_status, status_color: uDoc.status_color };
                         }
                     } catch(err) {
                         delete this.chats[oppId];
@@ -1269,12 +1479,14 @@
                         : `<div class="avatar">${firstLetter}</div>`;
                     const unread = this.unreadCounts[id] || 0;
                     const unreadHtml = unread > 0 ? `<span class="unread-badge">${unread}</span>` : '';
+                    const statusHtml = this.renderStatusBadge(this.chats[id].nick, this.chats[id].role, this.chats[id].custom_status, this.chats[id].status_color);
 
                     d.innerHTML = `<div style="display:flex; align-items:center; gap:16px; cursor:pointer;" onclick="app.openChat('${id}', '${escapeHTML(this.chats[id].name)}')">
                         ${avatarHtml}
                         <div style="flex:1; min-width:0;">
-                            <div style="display:flex; align-items:center;">
+                            <div style="display:flex; align-items:center; flex-wrap: wrap; gap: 4px;">
                                 <div style="font-weight:700; font-size: 16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(this.chats[id].name)}</div>
+                                ${statusHtml}
                                 ${unreadHtml}
                             </div>
                             <div class="last-msg-preview">${escapeHTML(preview)}</div>
@@ -1363,12 +1575,7 @@
                 }
                 
                 const statusContainer = document.getElementById('modal-user-status-container');
-                if (u.custom_status) {
-                    const color = u.status_color || 'var(--accent)';
-                    statusContainer.innerHTML = `<span class="custom-status" style="background: ${color};">${escapeHTML(u.custom_status)}</span>`;
-                } else {
-                    statusContainer.innerHTML = '';
-                }
+                statusContainer.innerHTML = this.renderStatusBadge(u.nickname, u.role, u.custom_status, u.status_color, u.is_banned);
                 
                 this.toggleModal('user-profile-modal', true);
             },
@@ -1437,6 +1644,9 @@
                             name: this.currentOpponentData.name, 
                             nick: this.currentOpponentData.nickname, 
                             avatar: this.currentOpponentData.avatar || '',
+                            role: this.currentOpponentData.role,
+                            custom_status: this.currentOpponentData.custom_status,
+                            status_color: this.currentOpponentData.status_color,
                             last_text: t
                         };
                     }
@@ -1599,7 +1809,7 @@
                         if (!this.chats[p.user_id] && p.user_id !== this.myId) {
                             try {
                                 const uDoc = await databases.getDocument(this.dbId, 'users', p.user_id);
-                                if (uDoc) this.chats[p.user_id] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '' };
+                                if (uDoc) this.chats[p.user_id] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '', role: uDoc.role, custom_status: uDoc.custom_status, status_color: uDoc.status_color };
                             } catch(err) {}
                         }
                     }
@@ -1610,8 +1820,9 @@
                         const likeColor = isLikedByMe ? 'var(--red)' : 'var(--text)';
                         
                         const isPostFromAdmin = (p.author_nickname === 'hyisa');
+                        const authorData = p.user_id === this.myId ? this.me : this.chats[p.user_id];
                         
-                        const authorAvatar = p.user_id === this.myId ? this.me.avatar : (this.chats[p.user_id]?.avatar || '');
+                        const authorAvatar = authorData?.avatar || '';
                         const avatarHtml = authorAvatar 
                             ? `<div class="avatar" style="width:36px; height:36px; font-size:14px;"><img src="${authorAvatar}" alt=""></div>` 
                             : `<div class="avatar" style="width:36px; height:36px; font-size:14px;">${p.author_name ? p.author_name[0].toUpperCase() : '?'}</div>`;
@@ -1629,6 +1840,8 @@
                         let safeText = parseMentions(escapeHTML(p.text));
                         safeText = parseHashtags(safeText);
 
+                        const statusHtml = this.renderStatusBadge(p.author_nickname, authorData?.role, authorData?.custom_status, authorData?.status_color);
+
                         const card = document.createElement('div');
                         card.className = `post-card ${isPostFromAdmin ? 'admin-post' : ''}`;
                         card.innerHTML = `
@@ -1636,10 +1849,12 @@
                                 <div style="display:flex; align-items:center; gap:10px;">
                                     ${avatarHtml}
                                     <div>
-                                        <b style="font-size: 15px;">${escapeHTML(p.author_name)}</b> 
+                                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                                            <b style="font-size: 15px;">${escapeHTML(p.author_name)}</b> 
+                                            ${statusHtml}
+                                        </div>
                                         <span style="color:var(--gray); font-size:12px; display:block;">@${escapeHTML(p.author_nickname)}</span>
                                     </div>
-                                    ${isPostFromAdmin ? '<span class="admin-badge"><i class="fas fa-shield-alt"></i> Админ</span>' : ''}
                                 </div>
                                 <div style="color:var(--gray); font-size:12px; font-weight: 500;">${this.formatTime(p.timestamp)}</div>
                             </div>
@@ -1933,4 +2148,4 @@
         };
     </script>
 </body>
-</html>
+</html> 
