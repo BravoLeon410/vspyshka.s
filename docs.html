@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Документация — ВСПЫШКА</title>
+    <style>
+        body {
+            background-color: #050505;
+            background-image: radial-gradient(circle at 50% 0%, #1a0a00 0%, #050505 100%);
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .a4-paper {
+            background-color: #ffffff;
+            color: #1a1a1a;
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        .a4-paper h1 { font-size: 28px; text-align: center; margin-bottom: 10px; color: #000; text-transform: uppercase; letter-spacing: 1px; }
+        .a4-paper .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        .a4-paper h2 { font-size: 20px; margin-top: 30px; margin-bottom: 15px; color: #000; }
+        .a4-paper h3 { font-size: 16px; margin-top: 20px; margin-bottom: 10px; color: #333; }
+        .a4-paper p { margin-bottom: 15px; text-align: justify; }
+        .a4-paper ul { margin-bottom: 15px; padding-left: 20px; }
+        .a4-paper li { margin-bottom: 8px; }
+        .a4-paper .highlight { font-weight: bold; color: #000; }
+        .a4-paper .warning { color: #d32f2f; font-weight: bold; }
+        .back-btn { display: inline-block; background-color: #ff8c00; color: #000; text-decoration: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; margin-bottom: 20px; transition: 0.2s; box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3); }
+        .back-btn:active { transform: scale(0.95); }
+        @media (max-width: 600px) {
+            .a4-paper { padding: 20px; font-size: 15px; }
+            .a4-paper h1 { font-size: 24px; }
+            .a4-paper h2 { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div style="width: 100%; max-width: 800px;">
+      <a href="javascript:history.back()" class="back-btn">← Вернуться к регистрации</a>
+
+        <div class="a4-paper">
+            <h1>ВСПЫШКА</h1>
+            <div class="subtitle">Официальная документация и правила сервиса</div>
+
+            <div id="terms">
+                <h2>Пользовательское соглашение</h2>
+                <p>Добро пожаловать в социальную сеть <span class="highlight">ВСПЫШКА</span>. Начиная использовать наш сервис, вы автоматически соглашаетесь с нижеперечисленными правилами. Если вы не согласны с каким-либо пунктом, пожалуйста, прекратите использование приложения.</p>
+                
+                <h3>1. Общие положения</h3>
+                <p>Сервис предоставляется на условиях «как есть». Администрация оставляет за собой право вносить изменения в интерфейс, функционал и данные правила без предварительного уведомления пользователей.</p>
+                
+                <h3>2. Правила поведения</h3>
+                <ul>
+                    <li><span class="highlight">Запрещено:</span> разжигание межнациональной розни, призывы к насилию, публикация материалов, нарушающих законодательство.</li>
+                    <li><span class="highlight">Запрещено:</span> спам, флуд, использование ботов и накрутка лайков/комментариев.</li>
+                    <li><span class="highlight">Запрещено:</span> публикация контента для взрослых (NSFW), шок-контента и сцен жестокости.</li>
+                    <li><span class="highlight">Запрещено:</span> оскорбление других пользователей, администрации и модераторов.</li>
+                    <li><span class="highlight">Разрешено:</span> делиться мнениями, общаться, публиковать посты на любые безопасные темы и использовать хештеги.</li>
+                </ul>
+                
+                <h3>3. Ответственность и Законодательство</h3>
+                <p>Пользователь несет полную личную ответственность за контент, который он публикует в ленте или отправляет в личных сообщениях. Администрация имеет право удалять любые посты и блокировать аккаунты без объяснения причин.</p>
+                <p class="warning">Внимание! Любое нарушение действующего законодательства Российской Федерации (включая, но не ограничиваясь: экстремизм, терроризм, мошенничество, распространение запрещенных веществ, клевета и т.д.) строго карается. В случае выявления подобных фактов, вся информация о пользователе (IP-адрес, данные аккаунта, история переписок) будет незамедлительно передана в правоохранительные органы для проведения проверки и привлечения виновных к ответственности в соответствии с УК РФ и КоАП РФ.</p>
+            </div>
+
+            <br><hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;"><br>
+
+            <div id="privacy">
+                <h2>Политика конфиденциальности</h2>
+                <p>Мы серьезно относимся к вашей приватности. В этом документе описано, какие данные мы собираем, как мы их используем и как защищаем.</p>
+                
+                <h3>1. Какие данные мы собираем</h3>
+                <ul>
+                    <li><span class="highlight">При регистрации:</span> ваш адрес электронной почты (Email), Имя, Никнейм и пароль (хранится в зашифрованном виде).</li>
+                    <li><span class="highlight">При использовании:</span> ваши текстовые посты, комментарии, личные сообщения и хештеги.</li>
+                    <li><span class="highlight">Технические данные:</span> системные токены авторизации и время отправки сообщений.</li>
+                </ul>
+                
+                <h3>2. Как мы используем данные</h3>
+                <p>Ваши данные используются исключительно для обеспечения работы приложения: отображения ленты, работы личных сообщений и системы уведомлений. Мы <span class="highlight">не передаем</span> ваши личные данные третьим лицам и не продаем их рекламным сетям (за исключением случаев, предусмотренных законом и описанных в п.3 Пользовательского соглашения).</p>
+                
+                <h3>3. Хранение и удаление данных</h3>
+                <p>Данные хранятся на защищенных серверах платформы Appwrite. Вы в любой момент можете отредактировать или удалить свои посты, комментарии и сообщения. При выходе из аккаунта ваша сессия уничтожается.</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
