@@ -1023,7 +1023,7 @@
                 } catch(e) { list.innerHTML = 'Ошибка загрузки'; }
             },
 
-            async submitAppeal() {
+                    async submitAppeal() {
                 const reasonInput = document.getElementById('appeal-reason');
                 const reason = reasonInput.value.trim();
                 if (!reason) return showToast("Напишите причину!");
@@ -1032,7 +1032,11 @@
                 btn.disabled = true; btn.innerText = "Отправка...";
 
                 try {
-                    await databases.createDocument(this.dbId, 'appeals', 'unique()', {
+                    // ЖЕСТКО ПРОВЕРЯЕМ ID БАЗЫ И КОЛЛЕКЦИИ
+                    const db = '6a0adb260034b853e4b8'; // Твой ID базы
+                    const coll = 'appeals'; // ID коллекции
+
+                    await databases.createDocument(db, coll, 'unique()', {
                         user_id: this.myId,
                         username: this.me.nickname,
                         reason: reason,
@@ -1042,11 +1046,12 @@
                     showToast("Апелляция отправлена админам!");
                     reasonInput.value = '';
                 } catch(e) {
-                    alert("Ошибка: " + e.message);
+                    // Если ошибка — выводим её полностью
+                    alert("ОШИБКА APPWRITE:\n" + e.message);
+                    console.error(e);
                 }
                 btn.disabled = false; btn.innerText = "Подать апелляцию";
             },
-
             toggleSortDropdown(event) {
                 event.stopPropagation();
                 const menu = document.getElementById('sort-dropdown-menu');
