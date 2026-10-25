@@ -160,9 +160,11 @@
         
         .admin-badge { background: var(--accent); color: #000; font-size: 10px; padding: 3px 8px; border-radius: 12px; font-weight: 800; margin-left: 8px; text-transform: uppercase; vertical-align: middle; box-shadow: 0 2px 8px var(--accent-glow); }
         .custom-status { font-size: 10px; padding: 3px 8px; border-radius: 12px; font-weight: 800; margin-left: 8px; text-transform: uppercase; vertical-align: middle; color: #000; }
+        .online-dot { display: inline-block; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; margin-right: 5px; box-shadow: 0 0 8px #22c55e; }
 
-        .avatar { width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent), #ff4500); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 15px var(--accent-glow); border: 2px solid rgba(255,255,255,0.2); overflow: hidden; }
+        .avatar { width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent), #ff4500); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 15px var(--accent-glow); border: 2px solid rgba(255,255,255,0.2); overflow: hidden; position: relative; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar .status-dot { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid var(--card-bg); box-shadow: 0 0 8px #22c55e; }
         [data-theme="blue"] .avatar { background: linear-gradient(135deg, var(--accent), #2563eb); }
         [data-theme="pink"] .avatar { background: linear-gradient(135deg, var(--accent), #a855f7); }
         [data-theme="purple"] .avatar { background: linear-gradient(135deg, var(--accent), #6d28d9); }
@@ -483,7 +485,10 @@
                     <div onclick="app.closeChat()" style="color:var(--accent); cursor:pointer; padding:5px 10px;"><i class="fas fa-chevron-left" style="font-size: 22px; text-shadow: 0 0 10px var(--accent-glow);"></i></div>
                     <div onclick="app.openOpponentProfile()" style="text-align:center; flex:1; cursor:pointer; overflow:hidden; padding: 0 10px; display: flex; align-items: center; justify-content: center; gap: 10px;">
                         <div class="avatar" id="chat-header-avatar" style="width: 36px; height: 36px; font-size: 14px;">?</div>
-                        <b id="chat-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size: 16px;">Чат</b>
+                        <div style="display: flex; flex-direction: column; align-items: flex-start; overflow: hidden;">
+                            <b id="chat-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size: 16px; line-height: 1.2;">Чат</b>
+                            <span id="chat-online-status" style="font-size: 11px; color: var(--gray); line-height: 1.2;"></span>
+                        </div>
                     </div>
                     <div style="width: 30px;"></div>
                 </header>
@@ -780,7 +785,7 @@
             currentOpponentData: null, currentMessageForReaction: null,
             chats: JSON.parse(localStorage.getItem('f_chats') || "{}"),
             dbId: '6a0adb260034b853e4b8', 
-            appealsCollectionId: '6adad3a0016458601a3', // Твой реальный ID коллекции appeals
+            appealsCollectionId: '6adad3a0016458601a3',
             subs: [],
             lastSendTime: 0,
             currentHashtagFilter: null,
@@ -791,6 +796,7 @@
             allUsersCache: {},
             mentionContext: null, mentionInput: null, mentionStart: 0, mentionSelectedIndex: -1, mentionFilteredUsers: [],
             currentAdminTab: 'users',
+            heartbeatInterval: null,
 
             renderStatusBadge(nickname, role, custom_status, status_color, isBanned) {
                 if (isBanned) return `<span class="custom-status" style="background: var(--red); color: #fff;"><i class="fas fa-ban"></i> Забанен</span>`;
@@ -802,6 +808,14 @@
                     html += `<span class="admin-badge"><i class="fas fa-shield-alt"></i> Админ</span>`;
                 }
                 return html;
+            },
+
+            formatLastSeen(ts) {
+                if (!ts) return 'был(а) давно';
+                const diff = Date.now() - ts;
+                if (diff < 2 * 60 * 1000) return 'в сети';
+                if (diff < 60 * 60 * 1000) return `был(а) ${Math.floor(diff/60000)} мин. назад`;
+                return `был(а) ${new Date(ts).toLocaleDateString()}`;
             },
 
             initSound() {
@@ -840,6 +854,25 @@
                 btn.disabled = !(terms && privacy);
             },
 
+            startHeartbeat() {
+                // Отправляем "я онлайн" сразу при входе
+                this.updatePresence(true);
+                // И потом каждые 30 секунд
+                this.heartbeatInterval = setInterval(() => {
+                    this.updatePresence(true);
+                }, 30000);
+            },
+
+            async updatePresence(isOnline) {
+                if (!this.myId) return;
+                try {
+                    await databases.updateDocument(this.dbId, 'users', this.myId, {
+                        is_online: isOnline,
+                        last_seen: Date.now()
+                    });
+                } catch(e) { console.warn('Ping error', e); }
+            },
+
             switchAdminTab(tab) {
                 this.currentAdminTab = tab;
                 document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
@@ -866,7 +899,7 @@
                         
                         card.innerHTML = `
                             <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
-                                <div class="avatar">${u.avatar ? `<img src="${u.avatar}">` : u.name[0].toUpperCase()}</div>
+                                <div class="avatar">${u.avatar ? `<img src="${u.avatar}">` : u.name[0].toUpperCase()} ${u.is_online ? '<div class="status-dot"></div>' : ''}</div>
                                 <div>
                                     <div style="display:flex; align-items:center; gap:8px;">
                                         <b style="font-size:16px;">${escapeHTML(u.name)}</b>
@@ -1410,7 +1443,7 @@
 
                         const res = await account.create('unique()', email, pass, name);
                         await account.createEmailPasswordSession(email, pass);
-                        await databases.createDocument(this.dbId, 'users', res.$id, { user_id: res.$id, name: name, nickname: nick, avatar: '', is_banned: false });
+                        await databases.createDocument(this.dbId, 'users', res.$id, { user_id: res.$id, name: name, nickname: nick, avatar: '', is_banned: false, last_seen: Date.now(), is_online: true });
                     } else {
                         await account.createEmailPasswordSession(document.getElementById('log-email').value, document.getElementById('log-pass').value);
                     }
@@ -1439,6 +1472,7 @@
                     this.updateProfileUI();
                     this.fetchAllUsers();
                     this.initSound();
+                    this.startHeartbeat();
 
                     if (typeof window !== 'undefined' && 'Notification' in window && window.Notification) {
                         if (Notification.permission === "default") Notification.requestPermission(); 
@@ -1452,54 +1486,75 @@
             initRealtimeGlobal() {
                 client.subscribe(`databases.${this.dbId}.collections.messages.documents`, async res => {
                     const m = res.payload;
-                    if (m.receiver_id === this.myId) {
-                        if (!this.chats[m.sender_id]) {
-                            try {
-                                const uDoc = await databases.getDocument(this.dbId, 'users', m.sender_id);
-                                if (uDoc && uDoc.name) this.chats[m.sender_id] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '', last_text: m.text };
-                            } catch(e) { return; }
-                        } else this.chats[m.sender_id].last_text = m.text;
+                    if (m.receiver_id === this.myId || m.sender_id === this.myId) {
                         
-                        if (this.currentOpponentId !== m.sender_id) {
-                            this.unreadCounts[m.sender_id] = (this.unreadCounts[m.sender_id] || 0) + 1;
-                            localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
+                        if (res.events.some(e => e.includes('.update'))) {
+                            const el = document.querySelector(`[data-id="${m.$id}"]`);
+                            if (el) {
+                                let msgText = m.text || '';
+                                let reactionsHtml = '';
+                                const reactionMatch = msgText.match(/\n\n\|\|(.*)$/);
+                                if (reactionMatch) {
+                                    msgText = msgText.replace(reactionMatch[0], '');
+                                    const reactions = reactionMatch[1].split('');
+                                    reactionsHtml = `<div class="msg-reactions">${reactions.map(r => `<div class="reaction-badge">${r}</div>`).join('')}</div>`;
+                                }
+                                let safeText = parseMentions(escapeHTML(msgText));
+                                safeText = parseHashtags(safeText);
+                                el.innerHTML = `<span>${safeText}</span>${reactionsHtml}<span class="msg-time">${this.formatTime(m.timestamp)}</span>`;
+                            }
+                            return; 
                         }
 
-                        this.save(); this.renderList();
-
-                        if(this.currentOpponentId !== m.sender_id) {
-                            const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
-                            
-                            if (Notification.permission === "granted") {
+                        if (m.receiver_id === this.myId) {
+                            if (!this.chats[m.sender_id]) {
                                 try {
-                                    if ('serviceWorker' in navigator) {
-                                        navigator.serviceWorker.ready.then(reg => {
-                                            if (reg.active) {
-                                                reg.active.postMessage({ type: 'SHOW_NOTIFICATION', title: `ВСПЫШКА: ${senderName}`, body: m.text, icon: 'icon-192.png' });
-                                            } else {
-                                                new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
-                                            }
-                                        }).catch(() => {
-                                            new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
-                                        });
-                                    } else {
-                                        new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
-                                    }
-                                } catch(err) { 
-                                    console.error(err);
-                                    try { new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' }); } catch(e){}
-                                }
+                                    const uDoc = await databases.getDocument(this.dbId, 'users', m.sender_id);
+                                    if (uDoc && uDoc.name) this.chats[m.sender_id] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '', last_text: m.text };
+                                } catch(e) { return; }
+                            } else this.chats[m.sender_id].last_text = m.text;
+                            
+                            if (this.currentOpponentId !== m.sender_id) {
+                                this.unreadCounts[m.sender_id] = (this.unreadCounts[m.sender_id] || 0) + 1;
+                                localStorage.setItem('f_unread', JSON.stringify(this.unreadCounts));
                             }
-                            
-                            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                            this.playNotifSound();
-                            
-                            if (!this.blinkInterval) {
-                                let isBlinking = false;
-                                this.blinkInterval = setInterval(() => {
-                                    document.title = isBlinking ? '🔴 Новое сообщение!' : this.originalTitle;
-                                    isBlinking = !isBlinking;
-                                }, 1000);
+
+                            this.save(); this.renderList();
+
+                            if(this.currentOpponentId !== m.sender_id) {
+                                const senderName = this.chats[m.sender_id] ? this.chats[m.sender_id].name : "Собеседник";
+                                
+                                if (Notification.permission === "granted") {
+                                    try {
+                                        if ('serviceWorker' in navigator) {
+                                            navigator.serviceWorker.ready.then(reg => {
+                                                if (reg.active) {
+                                                    reg.active.postMessage({ type: 'SHOW_NOTIFICATION', title: `ВСПЫШКА: ${senderName}`, body: m.text, icon: 'icon-192.png' });
+                                                } else {
+                                                    new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
+                                                }
+                                            }).catch(() => {
+                                                new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
+                                            });
+                                        } else {
+                                            new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' });
+                                        }
+                                    } catch(err) { 
+                                        console.error(err);
+                                        try { new Notification(`ВСПЫШКА: ${senderName}`, { body: m.text, icon: 'icon-192.png' }); } catch(e){}
+                                    }
+                                }
+                                
+                                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                                this.playNotifSound();
+                                
+                                if (!this.blinkInterval) {
+                                    let isBlinking = false;
+                                    this.blinkInterval = setInterval(() => {
+                                        document.title = isBlinking ? '🔴 Новое сообщение!' : this.originalTitle;
+                                        isBlinking = !isBlinking;
+                                    }, 1000);
+                                }
                             }
                         }
                     }
@@ -1517,17 +1572,36 @@
                     allMsgs = res.documents;
                 } catch(e) {}
 
+                // --- ОЧИЩАЕМ КЭШ ОТ ПУСТЫХ ЧАТОВ ---
                 let activeOpponentIds = new Set();
                 for (let m of allMsgs) {
                     const oppId = m.sender_id === this.myId ? m.receiver_id : m.sender_id;
                     activeOpponentIds.add(oppId);
                 }
+                
+                for (let id in this.chats) {
+                    if (!activeOpponentIds.has(id)) {
+                        delete this.chats[id];
+                        delete this.unreadCounts[id];
+                    }
+                }
+                this.save();
+                // -----------------------------------
 
                 for (let oppId of activeOpponentIds) {
                     try {
                         const uDoc = await databases.getDocument(this.dbId, 'users', oppId);
                         if (uDoc && uDoc.name) {
-                            this.chats[oppId] = { name: uDoc.name, nick: uDoc.nickname, avatar: uDoc.avatar || '', role: uDoc.role, custom_status: uDoc.custom_status, status_color: uDoc.status_color };
+                            this.chats[oppId] = { 
+                                name: uDoc.name, 
+                                nick: uDoc.nickname, 
+                                avatar: uDoc.avatar || '', 
+                                role: uDoc.role, 
+                                custom_status: uDoc.custom_status, 
+                                status_color: uDoc.status_color,
+                                is_online: uDoc.is_online,
+                                last_seen: uDoc.last_seen
+                            };
                         }
                     } catch(err) {
                         delete this.chats[oppId];
@@ -1556,9 +1630,12 @@
                     const preview = this.chats[id].last_text || 'Нет сообщений';
                     const firstLetter = this.chats[id].name ? this.chats[id].name[0].toUpperCase() : '?';
                     const serverAvatar = this.chats[id].avatar;
+                    const isOnline = this.chats[id].is_online;
+                    
                     const avatarHtml = serverAvatar 
-                        ? `<div class="avatar"><img src="${serverAvatar}" alt=""></div>` 
-                        : `<div class="avatar">${firstLetter}</div>`;
+                        ? `<div class="avatar"><img src="${serverAvatar}" alt="">${isOnline ? '<div class="status-dot"></div>' : ''}</div>` 
+                        : `<div class="avatar">${firstLetter}${isOnline ? '<div class="status-dot"></div>' : ''}</div>`;
+                    
                     const unread = this.unreadCounts[id] || 0;
                     const unreadHtml = unread > 0 ? `<span class="unread-badge">${unread}</span>` : '';
                     const statusHtml = this.renderStatusBadge(this.chats[id].nick, this.chats[id].role, this.chats[id].custom_status, this.chats[id].status_color);
@@ -1597,6 +1674,9 @@
                     } else {
                         avatarEl.innerText = name ? name[0].toUpperCase() : '?';
                     }
+                    const statusEl = document.getElementById('chat-online-status');
+                    statusEl.innerText = this.currentOpponentData.is_online ? 'в сети' : this.formatLastSeen(this.currentOpponentData.last_seen);
+                    statusEl.style.color = this.currentOpponentData.is_online ? '#22c55e' : 'var(--gray)';
                 } 
                 catch(e) { 
                     this.currentOpponentData = { name: name, nickname: this.chats[id]?.nick || 'unknown' };
@@ -1638,6 +1718,22 @@
                         if(r.events.some(e=>e.includes('.delete'))) {
                             document.querySelector(`[data-id="${m.$id}"]`)?.remove();
                         }
+                        if(r.events.some(e=>e.includes('.update'))) {
+                            const el = document.querySelector(`[data-id="${m.$id}"]`);
+                            if (el) {
+                                let msgText = m.text || '';
+                                let reactionsHtml = '';
+                                const reactionMatch = msgText.match(/\n\n\|\|(.*)$/);
+                                if (reactionMatch) {
+                                    msgText = msgText.replace(reactionMatch[0], '');
+                                    const reactions = reactionMatch[1].split('');
+                                    reactionsHtml = `<div class="msg-reactions">${reactions.map(r => `<div class="reaction-badge">${r}</div>`).join('')}</div>`;
+                                }
+                                let safeText = parseMentions(escapeHTML(msgText));
+                                safeText = parseHashtags(safeText);
+                                el.innerHTML = `<span>${safeText}</span>${reactionsHtml}<span class="msg-time">${this.formatTime(m.timestamp)}</span>`;
+                            }
+                        }
                     }
                 });
                 this.subs.push(s1);
@@ -1657,7 +1753,13 @@
                 }
                 
                 const statusContainer = document.getElementById('modal-user-status-container');
-                statusContainer.innerHTML = this.renderStatusBadge(u.nickname, u.role, u.custom_status, u.status_color, u.is_banned);
+                let statusHtml = this.renderStatusBadge(u.nickname, u.role, u.custom_status, u.status_color, u.is_banned);
+                if (!u.is_banned) {
+                    const onlineText = u.is_online ? 'В сети' : this.formatLastSeen(u.last_seen);
+                    const onlineColor = u.is_online ? '#22c55e' : 'var(--gray)';
+                    statusHtml += `<div style="font-size:13px; color:${onlineColor}; margin-top: 10px;">${onlineText}</div>`;
+                }
+                statusContainer.innerHTML = statusHtml;
                 
                 this.toggleModal('user-profile-modal', true);
             },
@@ -1729,6 +1831,8 @@
                             role: this.currentOpponentData.role,
                             custom_status: this.currentOpponentData.custom_status,
                             status_color: this.currentOpponentData.status_color,
+                            is_online: this.currentOpponentData.is_online,
+                            last_seen: this.currentOpponentData.last_seen,
                             last_text: t
                         };
                     }
@@ -2154,7 +2258,10 @@
             toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; },
             save() { localStorage.setItem('f_chats', JSON.stringify(this.chats)); },
             async logout() {
-                try { await account.deleteSession('current'); } catch(e){}
+                try {
+                    await this.updatePresence(false);
+                    await account.deleteSession('current'); 
+                } catch(e){}
                 localStorage.clear(); location.reload();
             }
         };
