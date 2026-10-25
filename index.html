@@ -780,6 +780,7 @@
             currentOpponentData: null, currentMessageForReaction: null,
             chats: JSON.parse(localStorage.getItem('f_chats') || "{}"),
             dbId: '6a0adb260034b853e4b8', 
+            appealsCollectionId: '6adad3a0016458601a3', // Твой реальный ID коллекции appeals
             subs: [],
             lastSendTime: 0,
             currentHashtagFilter: null,
@@ -817,7 +818,6 @@
                     if (el) el.style.display = s === soundName ? 'block' : 'none';
                 });
 
-                // Проигрываем звук для прослушивания при выборе
                 if (save) {
                     const audio = new Audio(soundName);
                     audio.volume = 0.5;
@@ -916,7 +916,7 @@
 
             async banUser(uid) {
                 const reason = prompt("Укажите причину бана:");
-                if (reason === null) return; // Отмена
+                if (reason === null) return;
                 try {
                     await databases.updateDocument(this.dbId, 'users', uid, {
                         is_banned: true,
@@ -942,7 +942,7 @@
                 const list = document.getElementById('appeals-list');
                 list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--gray);">Загрузка...</div>';
                 try {
-                    const res = await databases.listDocuments(this.dbId, 'appeals', [
+                    const res = await databases.listDocuments(this.dbId, this.appealsCollectionId, [
                         Appwrite.Query.equal('status', 'pending'),
                         Appwrite.Query.orderDesc('timestamp')
                     ]);
@@ -977,7 +977,7 @@
 
             async resolveAppeal(appealId, userId, status) {
                 try {
-                    await databases.updateDocument(this.dbId, 'appeals', appealId, { status: status });
+                    await databases.updateDocument(this.dbId, this.appealsCollectionId, appealId, { status: status });
                     if (status === 'approved') {
                         await databases.updateDocument(this.dbId, 'users', userId, { is_banned: false, ban_reason: '' });
                         showToast('Пользователь разбанен');
@@ -1023,7 +1023,7 @@
                 } catch(e) { list.innerHTML = 'Ошибка загрузки'; }
             },
 
-                    async submitAppeal() {
+            async submitAppeal() {
                 const reasonInput = document.getElementById('appeal-reason');
                 const reason = reasonInput.value.trim();
                 if (!reason) return showToast("Напишите причину!");
@@ -1032,11 +1032,7 @@
                 btn.disabled = true; btn.innerText = "Отправка...";
 
                 try {
-                    // ЖЕСТКО ПРОВЕРЯЕМ ID БАЗЫ И КОЛЛЕКЦИИ
-                    const db = '6a0adb260034b853e4b8'; // Твой ID базы
-                    const coll = 'appeals'; // ID коллекции
-
-                    await databases.createDocument(db, coll, 'unique()', {
+                    await databases.createDocument(this.dbId, this.appealsCollectionId, 'unique()', {
                         user_id: this.myId,
                         username: this.me.nickname,
                         reason: reason,
@@ -1046,12 +1042,12 @@
                     showToast("Апелляция отправлена админам!");
                     reasonInput.value = '';
                 } catch(e) {
-                    // Если ошибка — выводим её полностью
                     alert("ОШИБКА APPWRITE:\n" + e.message);
                     console.error(e);
                 }
                 btn.disabled = false; btn.innerText = "Подать апелляцию";
             },
+
             toggleSortDropdown(event) {
                 event.stopPropagation();
                 const menu = document.getElementById('sort-dropdown-menu');
@@ -1212,21 +1208,30 @@
                     const permission = await Notification.requestPermission();
                     if (permission !== "granted") return showToast("Разрешите уведомления в браузере!");
                 }
+                
                 try {
                     if ('serviceWorker' in navigator) {
                         await navigator.serviceWorker.ready;
                         if (navigator.serviceWorker.controller) {
-                            navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title: 'Тест уведомления', body: 'Если вы это видите, значит уведомления работают!', icon: 'icon-192.png' });
+                            navigator.serviceWorker.controller.postMessage({ 
+                                type: 'SHOW_NOTIFICATION', 
+                                title: 'ВСПЫШКА', 
+                                body: 'Уведомления работают корректно!', 
+                                icon: 'icon-192.png' 
+                            });
                         } else {
-                            new Notification('Тест уведомления', { body: 'Работает напрямую (контроллер не готов)', icon: 'icon-192.png' });
+                            new Notification('ВСПЫШКА', { body: 'Уведомления работают!', icon: 'icon-192.png', silent: true });
                         }
                     } else {
-                         new Notification('Тест уведомления', { body: 'Работает напрямую', icon: 'icon-192.png' });
+                        new Notification('ВСПЫШКА', { body: 'Работает напрямую', icon: 'icon-192.png', silent: true });
                     }
+                    
+                    this.playNotifSound();
                     showToast("Уведомление отправлено!");
                 } catch (e) {
                     showToast("Ошибка: " + e.message);
-                    try { new Notification('Тест уведомления', { body: 'Резервный вариант', icon: 'icon-192.png' }); } catch(err) {}
+                    this.playNotifSound();
+                    try { new Notification('ВСПЫШКА', { body: 'Резервный вариант', icon: 'icon-192.png', silent: true }); } catch(err) {}
                 }
             },
 
