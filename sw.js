@@ -1,34 +1,57 @@
-self.addEventListener('install', (event) => { self.skipWaiting(); });
-self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()); });
-
-// Обработка пуша от сервера
-self.addEventListener('push', function(event) {
-    let data = { title: 'ВСПЫШКА', body: 'Новое сообщение' };
-    if (event.data) {
-        try { data = event.data.json(); } catch(e) { data.body = event.data.text(); }
-    }
-    
-    event.waitUntil(
-        self.registration.showNotification(data.title, {
-            body: data.body,
-            icon: 'https://bravoleon410.github.io/icon-192.png',
-            badge: 'https://bravoleon410.github.io/icon-192.png',
-            vibrate: [200, 100, 200],
-            tag: 'vspishka-msg',
-            renotify: true
-        })
-    );
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
 });
 
-// Клик по уведомлению
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim());
+});
+
+// Обработка пуш-уведомлений (если придут с сервера)
+self.addEventListener('push', function(event) {
+    if (event.data) {
+        const data = event.data.json();
+        const options = {
+            body: data.body,
+            icon: 'icon-192.png',
+            badge: 'icon-192.png',
+            vibrate: [200, 100, 200]
+        };
+        event.waitUntil(
+            self.registration.showNotification(data.title, options)
+        );
+    }
+});
+
+// Обработка сообщений из самого приложения (наш случай)
+self.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+        const options = {
+            body: event.data.body,
+            icon: event.data.icon || 'icon-192.png',
+            badge: 'icon-192.png',
+            vibrate: [200, 100, 200],
+            data: { url: self.location.origin }
+        };
+        event.waitUntil(
+            self.registration.showNotification(event.data.title, options)
+        );
+    }
+});
+
+// Клик по уведомлению (открывает приложение)
+self.addEventListener('notificationclick', function(event) {
     event.notification.close();
     event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            for (const client of clientList) {
-                if (client.url.includes(self.location.origin) && 'focus' in client) return client.focus();
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+            for (var i = 0; i < clientList.length; i++) {
+                var client = clientList[i];
+                if (client.url && 'focus' in client) {
+                    return client.focus();
+                }
             }
-            if (clients.openWindow) return clients.openWindow('./');
+            if (clients.openWindow) {
+                return clients.openWindow('/');
+            }
         })
     );
 });
